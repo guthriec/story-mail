@@ -36,6 +36,8 @@
 		5BC46F15217F9AAB002BA8E6 /* StoryListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BC46F14217F9AAB002BA8E6 /* StoryListViewModel.swift */; };
 		5BC46F17217F9D64002BA8E6 /* StoryListTableViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BC46F16217F9D64002BA8E6 /* StoryListTableViewModel.swift */; };
 		5BC78D5D2155A5A1002CD128 /* StoryLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BC78D5C2155A5A1002CD128 /* StoryLayout.swift */; };
+		5BDD262121938A220063264C /* LocalUserMO+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BDD261F21938A220063264C /* LocalUserMO+CoreDataClass.swift */; };
+		5BDD262221938A220063264C /* LocalUserMO+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BDD262021938A220063264C /* LocalUserMO+CoreDataProperties.swift */; };
 		5BEC2EAD218B5DF5003DF20C /* SlideRightSegue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BEC2EAC218B5DF5003DF20C /* SlideRightSegue.swift */; };
 		5BEC2EAF218B6C10003DF20C /* SlideRightUnwindSegue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BEC2EAE218B6C10003DF20C /* SlideRightUnwindSegue.swift */; };
 		5BEC2EB1218D19E2003DF20C /* SignInViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BEC2EB0218D19E2003DF20C /* SignInViewController.swift */; };
@@ -94,6 +96,8 @@
 		5BC46F14217F9AAB002BA8E6 /* StoryListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryListViewModel.swift; sourceTree = "<group>"; };
 		5BC46F16217F9D64002BA8E6 /* StoryListTableViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryListTableViewModel.swift; sourceTree = "<group>"; };
 		5BC78D5C2155A5A1002CD128 /* StoryLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryLayout.swift; sourceTree = "<group>"; };
+		5BDD261F21938A220063264C /* LocalUserMO+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LocalUserMO+CoreDataClass.swift"; sourceTree = "<group>"; };
+		5BDD262021938A220063264C /* LocalUserMO+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LocalUserMO+CoreDataProperties.swift"; sourceTree = "<group>"; };
 		5BEC2EAC218B5DF5003DF20C /* SlideRightSegue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideRightSegue.swift; sourceTree = "<group>"; };
 		5BEC2EAE218B6C10003DF20C /* SlideRightUnwindSegue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideRightUnwindSegue.swift; sourceTree = "<group>"; };
 		5BEC2EB0218D19E2003DF20C /* SignInViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInViewController.swift; sourceTree = "<group>"; };
@@ -185,6 +189,8 @@
 		5BB5A2182150B76300B9E5B3 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				5BDD261F21938A220063264C /* LocalUserMO+CoreDataClass.swift */,
+				5BDD262021938A220063264C /* LocalUserMO+CoreDataProperties.swift */,
 				5B6E4B052190FD21003FABA0 /* UserMO+CoreDataClass.swift */,
 				5B6E4B062190FD21003FABA0 /* UserMO+CoreDataProperties.swift */,
 				5B0016E32181291E00B5E932 /* PageMO+CoreDataClass.swift */,
@@ -384,11 +390,13 @@
 				5BB5A215214F38B100B9E5B3 /* SlideUpSegueUnwind.swift in Sources */,
 				5B6E4AFE2190EF44003FABA0 /* ProfileViewController.swift in Sources */,
 				5BB5A207214B096800B9E5B3 /* CameraViewModel.swift in Sources */,
+				5BDD262121938A220063264C /* LocalUserMO+CoreDataClass.swift in Sources */,
 				5B4C8BE92134DCF000E8883D /* CameraViewController.swift in Sources */,
 				5B6E4AFC2190E6EA003FABA0 /* SignInViewModel.swift in Sources */,
 				5BEC2EB1218D19E2003DF20C /* SignInViewController.swift in Sources */,
 				5B2780EB21822FF2009E53AF /* Drifter.xcdatamodeld in Sources */,
 				5BEC2EAF218B6C10003DF20C /* SlideRightUnwindSegue.swift in Sources */,
+				5BDD262221938A220063264C /* LocalUserMO+CoreDataProperties.swift in Sources */,
 				5BBC30A3217FB88A002B6D63 /* StoryListTableViewController.swift in Sources */,
 				5B6E4B082190FD21003FABA0 /* UserMO+CoreDataProperties.swift in Sources */,
 				5B0016E0218126BF00B5E932 /* StoryMO+CoreDataProperties.swift in Sources */,

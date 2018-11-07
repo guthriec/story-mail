@@ -15,22 +15,24 @@ class StateController {
   var managedInboxStories: ManagedStoryList
   var archivedStories: ManagedStoryList
   var activeUser: UserMO?
+  var localUsers: Array<LocalUserMO>?
   
   var userDefaults: UserDefaults
   
   var activeUsername: String? {
     didSet {
-      print("in didset")
       onActiveUserChange?()
     }
   }
+  
+  var onActiveUserChange: (() -> ())?
+  
   var localUserNames: Array<String>? {
-    return userDefaults.stringArray(forKey: "localUserNames")
+    return localUsers?.map { $0.username! }
   }
   
   var replyingToStoryId: String?
   
-  var onActiveUserChange: (() -> ())?
   
   func fetchUserByName(username: String) -> UserMO? {
     let userFetchRequest = NSFetchRequest<UserMO>(entityName: "User")
@@ -49,24 +51,25 @@ class StateController {
     }
   }
   
-  func addLocalUsername(name: String) {
-    print("should be adding a local username")
-    if var localNames = localUserNames {
-      localNames.append(name)
-      userDefaults.set(localNames, forKey: "localUserNames")
-    } else {
-      userDefaults.set([name], forKey: "localUserNames")
+  func fetchLocalUsers() {
+    let localUserFetchRequest = NSFetchRequest<LocalUserMO>(entityName: "LocalUser")
+    do {
+      let localUserResults = try managedContext.fetch(localUserFetchRequest)
+      localUsers = localUserResults
+    } catch let error as NSError {
+      print("Could not fetch users. \(error)")
+      return
     }
   }
   
-  func createLocalUser(name: String) -> UserMO {
+  func createLocalUser(name: String) -> LocalUserMO {
     print("should be creating a local user")
-    let userEntity = NSEntityDescription.entity(forEntityName: "User", in: managedContext)!
-    let newUser = UserMO(entity: userEntity, insertInto: managedContext)
+    let userEntity = NSEntityDescription.entity(forEntityName: "LocalUser", in: managedContext)!
+    let newUser = LocalUserMO(entity: userEntity, insertInto: managedContext)
 
     newUser.setValue(name, forKey: "username")
     self.persistData()
-    addLocalUsername(name: name)
+    fetchLocalUsers()
     return newUser
   }
   
@@ -80,10 +83,10 @@ class StateController {
     activeUsername = name
     if let allLocalNames = localUserNames {
       if !allLocalNames.contains(name) {
-        addLocalUsername(name: name)
+        _ = createLocalUser(name: name)
       }
     } else {
-      addLocalUsername(name: name)
+      _ = createLocalUser(name: name)
     }
     guard let user = activeUser else {
       print("no active user shithead")
@@ -139,6 +142,7 @@ class StateController {
       return
     }
     activeUser = fetchUserByName(username: username)
+    fetchLocalUsers()
     fetchStoriesForActiveUser()
   }
   

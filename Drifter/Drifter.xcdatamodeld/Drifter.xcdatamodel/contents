@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="14460.32" systemVersion="18A391" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="LocalUser" representedClassName="LocalUserMO" parentEntity="User" syncable="YES">
+        <attribute name="apiPassword" optional="YES" attributeType="String" syncable="YES"/>
+    </entity>
     <entity name="Page" representedClassName="PageMO" syncable="YES">
         <attribute name="backgroundImageRelativePath" attributeType="String" syncable="YES"/>
         <attribute name="timestamp" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
@@ -13,14 +16,15 @@
         <relationship name="contributors" toMany="YES" deletionRule="Nullify" destinationEntity="User" inverseName="stories" inverseEntity="User" syncable="YES"/>
         <relationship name="pages" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="Page" inverseName="stories" inverseEntity="Page" syncable="YES"/>
     </entity>
-    <entity name="User" representedClassName="UserMO" syncable="YES">
+    <entity name="User" representedClassName="UserMO" isAbstract="YES" syncable="YES">
         <attribute name="username" attributeType="String" syncable="YES"/>
         <relationship name="pages" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Page" inverseName="author" inverseEntity="Page" syncable="YES"/>
         <relationship name="stories" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Story" inverseName="contributors" inverseEntity="Story" syncable="YES"/>
     </entity>
     <elements>
-        <element name="Page" positionX="-54" positionY="-9" width="128" height="105"/>
-        <element name="Story" positionX="-63" positionY="-18" width="128" height="120"/>
-        <element name="User" positionX="-54" positionY="18" width="128" height="90"/>
+        <element name="Page" positionX="1.828125" positionY="-11.32421875" width="128" height="105"/>
+        <element name="Story" positionX="37.14453125" positionY="255.703125" width="128" height="120"/>
+        <element name="User" positionX="-341.94921875" positionY="308.87109375" width="128" height="90"/>
+        <element name="LocalUser" positionX="-340.34765625" positionY="127.05078125" width="128" height="58"/>
     </elements>
 </model>

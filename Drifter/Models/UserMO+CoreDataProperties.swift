@@ -2,7 +2,7 @@
 //  UserMO+CoreDataProperties.swift
 //  Drifter
 //
-//  Created by Chris on 11/6/18.
+//  Created by Chris on 11/7/18.
 //  Copyright © 2018 Sun Canyon. All rights reserved.
 //
 //
@@ -18,25 +18,8 @@ extension UserMO {
     }
 
     @NSManaged public var username: String?
-    @NSManaged public var stories: NSSet?
     @NSManaged public var pages: NSSet?
-
-}
-
-// MARK: Generated accessors for stories
-extension UserMO {
-
-    @objc(addStoriesObject:)
-    @NSManaged public func addToStories(_ value: StoryMO)
-
-    @objc(removeStoriesObject:)
-    @NSManaged public func removeFromStories(_ value: StoryMO)
-
-    @objc(addStories:)
-    @NSManaged public func addToStories(_ values: NSSet)
-
-    @objc(removeStories:)
-    @NSManaged public func removeFromStories(_ values: NSSet)
+    @NSManaged public var stories: NSSet?
 
 }
 
@@ -54,5 +37,22 @@ extension UserMO {
 
     @objc(removePages:)
     @NSManaged public func removeFromPages(_ values: NSSet)
+
+}
+
+// MARK: Generated accessors for stories
+extension UserMO {
+
+    @objc(addStoriesObject:)
+    @NSManaged public func addToStories(_ value: StoryMO)
+
+    @objc(removeStoriesObject:)
+    @NSManaged public func removeFromStories(_ value: StoryMO)
+
+    @objc(addStories:)
+    @NSManaged public func addToStories(_ values: NSSet)
+
+    @objc(removeStories:)
+    @NSManaged public func removeFromStories(_ values: NSSet)
 
 }
