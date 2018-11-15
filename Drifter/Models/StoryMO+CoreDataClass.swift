@@ -26,6 +26,13 @@ public class StoryMO: NSManagedObject {
       self.addToContributors(author)
     }
   }
+  func contributorUsernames() -> Array<String> {
+    var res = Array<String>()
+    for contributor in self.contributors! {
+      res.append((contributor as! UserMO).value(forKey: "username") as! String)
+    }
+    return res
+  }
 }
 
 enum StoryError: Swift.Error {

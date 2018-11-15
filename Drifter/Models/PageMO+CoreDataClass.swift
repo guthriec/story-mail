@@ -47,6 +47,20 @@ public class PageMO: NSManagedObject {
     return image
   }
   
+  func getBackgroundImageData() -> Data? {
+    guard let backgroundURLPath = self.value(forKey: "backgroundImageRelativePath") as! String? else {
+      print("no URL string provided")
+      return nil
+    }
+    let imageUrl = getDocumentsDirectory().appendingPathComponent(backgroundURLPath)
+    do {
+      return try Data(contentsOf: imageUrl)
+    } catch {
+      print(error)
+      return nil
+    }
+  }
+  
   func deleteBackgroundImage() -> Bool {
     guard let backgroundURLPath = self.value(forKey: "backgroundImageRelativePath") as! String? else {
       print("no URL string provided")

@@ -53,11 +53,13 @@ class StoryListTableViewCell: UITableViewCell {
     storyCollectionView.tag = row
     storyCollectionView.reloadData()
   }
+  
   func setStoryLayoutDelegate(delegate: StoryLayoutDelegate) {
     if let layout = storyCollectionView.collectionViewLayout as? StoryLayout {
       layout.delegate = delegate
     }
   }
+  
   func invalidateStoryLayout() {
     storyCollectionView.collectionViewLayout.invalidateLayout()
   }
@@ -91,7 +93,6 @@ class StoryListTableViewController: UITableViewController {
   var emptyText: String!
   
   override func viewDidLoad() {
-    print("loading tableviewcontroller")
     super.viewDidLoad()
     tableView.allowsSelection = false
     viewModel.setOnStoryChange({

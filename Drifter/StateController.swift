@@ -14,7 +14,7 @@ class StateController {
   var managedContext: NSManagedObjectContext
   var managedInboxStories: ManagedStoryList
   var archivedStories: ManagedStoryList
-  var activeUser: UserMO?
+  var activeUser: LocalUserMO?
   var localUsers: Array<LocalUserMO>?
   
   var userDefaults: UserDefaults
@@ -53,6 +53,7 @@ class StateController {
   
   func fetchLocalUsers() {
     let localUserFetchRequest = NSFetchRequest<LocalUserMO>(entityName: "LocalUser")
+    localUserFetchRequest.predicate = NSPredicate(format: "(shouldBeDeleted == FALSE)")
     do {
       let localUserResults = try managedContext.fetch(localUserFetchRequest)
       localUsers = localUserResults
@@ -68,33 +69,38 @@ class StateController {
     let newUser = LocalUserMO(entity: userEntity, insertInto: managedContext)
 
     newUser.setValue(name, forKey: "username")
-    self.persistData()
-    fetchLocalUsers()
+    newUser.assignRandomPassword()
     return newUser
   }
   
+  func saveLocalUser(_ : LocalUserMO) {
+    self.persistData()
+    fetchLocalUsers()
+  }
+  
   func setActiveUser(name: String) {
-    let fetchedUser = fetchUserByName(username: name)
-    if (fetchedUser == nil) {
-      activeUser = createLocalUser(name: name)
-    } else {
-      activeUser = fetchedUser
-    }
-    activeUsername = name
-    if let allLocalNames = localUserNames {
-      if !allLocalNames.contains(name) {
-        _ = createLocalUser(name: name)
-      }
-    } else {
-      _ = createLocalUser(name: name)
-    }
-    guard let user = activeUser else {
-      print("no active user shithead")
+    guard let localUsers = localUsers else {
       return
     }
-    print("setting active user: ", user.value(forKey: "username") ?? "<no username for active user>")
+    let localUserMatches = localUsers.filter({ $0.username == name })
+    if (localUsers.count == 0 || localUserMatches.count == 0) {
+      activeUser = createLocalUser(name: name)
+      return
+    }
+    activeUser = localUserMatches[0]
+    activeUsername = name
+    print("setting active user: ", activeUser?.value(forKey: "username") ?? "<no username for active user>")
     fetchStoriesForActiveUser()
-    userDefaults.set(name, forKey: "defaultUserName")
+    userDefaults.set(name, forKey: "defaultUsername")
+  }
+  
+  func deleteActiveUser() {
+    activeUser?.setValue(true, forKey: "shouldBeDeleted")
+    activeUser = nil
+    activeUsername = nil
+    userDefaults.setValue(nil, forKey: "defaultUsername")
+    self.persistData()
+    fetchLocalUsers()
   }
   
   func fetchStoriesForActiveUser() {
@@ -135,14 +141,15 @@ class StateController {
     archivedStories = ManagedStoryList()
     
     userDefaults = UserDefaults.standard
-    activeUsername = userDefaults.string(forKey: "defaultUserName")
+    fetchLocalUsers()
+
+    activeUsername = userDefaults.string(forKey: "defaultUsername")
     print(activeUsername ?? "no active username")
     guard let username = activeUsername else {
       activeUser = nil
       return
     }
-    activeUser = fetchUserByName(username: username)
-    fetchLocalUsers()
+    setActiveUser(name: username)
     fetchStoriesForActiveUser()
   }
   
@@ -176,11 +183,13 @@ class StateController {
     }
     //print("appending ", newManagedStory, " to managedInboxStories")
     //print("original count: ", self.managedInboxStories.managedStories.count)
-    self.managedInboxStories.add(stories: [newManagedStory])
-    self.managedInboxStories.sortStories()
     //print("later count: ", self.managedInboxStories.managedStories.count)
-    self.persistData()
     return newManagedStory
+  }
+  
+  func addStoryToInbox(_ newStory: StoryMO) {
+    self.managedInboxStories.add(stories: [newStory])
+    self.managedInboxStories.sortStories()
   }
   
   func persistData() {

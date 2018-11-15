@@ -34,4 +34,9 @@ class ProfileViewModel {
   func newSignInViewModel() -> SignInViewModel {
     return SignInViewModel(stateController)
   }
+  
+  func deleteActiveUser() {
+    stateController.deleteActiveUser()
+  }
+  
 }

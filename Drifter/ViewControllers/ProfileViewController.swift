@@ -17,6 +17,7 @@ class ProfileViewController: UIViewController {
   func setUsernameLabel() {
     print("setting username")
     guard let activeUsername = viewModel.activeUsername else {
+      usernameLabel.text = "Account Deleted"
       return
     }
     usernameLabel.text = activeUsername
@@ -29,17 +30,27 @@ class ProfileViewController: UIViewController {
   }
     
   @IBAction func profileInboxTouchUp(_ sender: Any) {
-    performSegue(withIdentifier: "ProfileToInbox", sender: nil)
+    if (viewModel.activeUsername == nil) {
+      let mustLogInAlert = UIAlertController(title: "Choose an Account",
+                                             message: "You must be signed in to use Drifter",
+                                             preferredStyle: .alert)
+      mustLogInAlert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+      self.present(mustLogInAlert, animated: false, completion: nil)
+    } else {
+      performSegue(withIdentifier: "ProfileToInbox", sender: nil)
+    }
   }
   
-  @IBAction func switchAccountsTouchUp(_ sender: Any) {
+  func presentAccountsSelector() {
     let switchAccountsActionSheet = UIAlertController(title: "Select Account", message: nil,
                                                       preferredStyle: .actionSheet)
     var existingAccountActions = Array<UIAlertAction>()
-    let activeUsernameAction = UIAlertAction(title: viewModel.activeUsername, style: .default, handler: {_ in
-      print("active here")
-    })
-    existingAccountActions.append(activeUsernameAction)
+    if (viewModel.activeUsername != nil) {
+      let activeUsernameAction = UIAlertAction(title: viewModel.activeUsername, style: .default, handler: {_ in
+        print("active here")
+      })
+      existingAccountActions.append(activeUsernameAction)
+    }
     if let localUsernames = viewModel.localUsernames {
       print(localUsernames)
       for name in localUsernames {
@@ -60,6 +71,29 @@ class ProfileViewController: UIViewController {
     }
     switchAccountsActionSheet.addAction(newUserAction)
     self.present(switchAccountsActionSheet, animated: true, completion: nil)
+
+  }
+  
+  @IBAction func switchAccountsTouchUp(_ sender: Any) {
+    presentAccountsSelector()
+  }
+  
+  @IBAction func deleteAccountTouchUp(_ sender: Any) {
+    let confirmDeleteAlert = UIAlertController(title: "Confirm",
+                                               message: "Delete user: \(viewModel.activeUsername ?? "Nonexistent Account...")",
+                                               preferredStyle: .alert)
+    confirmDeleteAlert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: {_ in
+      return
+    }))
+    confirmDeleteAlert.addAction(UIAlertAction(title: "Delete", style: .destructive, handler: {_ in
+      self.viewModel.deleteActiveUser()
+      self.presentAccountsSelector()
+    }))
+    self.present(confirmDeleteAlert, animated: true, completion: nil)
+  }
+  
+  @IBAction func addContactsTouchUp(_ sender: Any) {
+    self.performSegue(withIdentifier: "ProfileToAddContacts", sender: nil)
   }
   
   @IBAction func returnToProfileView(segue: UIStoryboardSegue) {}

@@ -15,14 +15,35 @@ class SignInViewModel {
     self.stateController = stateController
   }
   
-  func setActiveUser(name: String?) {
-    guard let userName = name else {
+  func registerNewUser(name: String?, completion: @escaping (Bool) -> ()) {
+    guard let name = name else {
       return
     }
-    stateController.setActiveUser(name: userName)
+    let newUser = stateController.createLocalUser(name: name)
+    let authenticator = Authenticator(localUser: newUser)
+    authenticator.register(completion: {(success, message) in
+      print("Registration successful?: ", success)
+      print("with message: ", message ?? "no message")
+      if (success) {
+        self.stateController.saveLocalUser(newUser)
+        self.setActiveUser(name: name)
+      }
+      completion(success)
+    })
+  }
+  
+  func setActiveUser(name: String?) {
+    guard let username = name else {
+      return
+    }
+    stateController.setActiveUser(name: username)
   }
   
   func newInboxViewModel() -> StoryListViewModel {
     return StoryListViewModel(self.stateController)
+  }
+  
+  func localUsernames() -> Array<String>? {
+    return stateController.localUserNames
   }
 }
