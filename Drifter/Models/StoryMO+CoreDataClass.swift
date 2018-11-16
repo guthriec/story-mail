@@ -12,6 +12,7 @@ import CoreData
 
 @objc(StoryMO)
 public class StoryMO: NSManagedObject {
+  
   func addPageAndUpdate(page: PageMO) throws {
     guard let timestamp = page.timestamp as Date? else {
       throw StoryError.PageNotTimestamped
@@ -26,6 +27,7 @@ public class StoryMO: NSManagedObject {
       self.addToContributors(author)
     }
   }
+  
   func contributorUsernames() -> Array<String> {
     var res = Array<String>()
     for contributor in self.contributors! {

@@ -35,7 +35,7 @@ class UserSearcher {
     guard let userUrl = apiWorker.urlWithQuery(endpointPath: "/users", queryName: "q", queryValue: query) else {
       throw UserSearcherError.BadQuery
     }
-    apiWorker.get(url: userUrl, completion: {(success, res) in
+    apiWorker.get(url: userUrl, jwt: nil, completion: {(success, res) in
       guard let resString = res, let resData = resString.data(using: String.Encoding.utf8) else {
         print("Unparsable response")
         completion([])

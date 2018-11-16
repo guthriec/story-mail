@@ -9,11 +9,9 @@
 import Foundation
 
 class ApiWorker {
-  var urlSession: URLSession
-  var getTask: URLSessionDataTask?
-  var postTask: URLSessionUploadTask?
+  private var urlSession: URLSession
   
-  let apiBase: String
+  private let apiBase: String
   
   init() {
     urlSession = URLSession(configuration: .default)
@@ -41,14 +39,13 @@ class ApiWorker {
   }
   
   func post(url: URL, uploadData: Data, jwt: String?, completion: @escaping (Bool, String?) -> ()) {
-    postTask?.cancel()
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     if let jwt = jwt {
       request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
     }
-    postTask = urlSession.uploadTask(with: request, from: uploadData) { data, res, err in
+    let postTask = urlSession.uploadTask(with: request, from: uploadData) { data, res, err in
       if let error = err {
         completion(false, "network error: \(error)")
         return
@@ -67,12 +64,16 @@ class ApiWorker {
         }
       }
     }
-    postTask?.resume()
+    postTask.resume()
   }
   
-  func get(url: URL, completion: @escaping(Bool, String?) -> ()) {
-    getTask?.cancel()
-    getTask = urlSession.dataTask(with: url, completionHandler: {(data, response, error) in
+  func get(url: URL, jwt: String?, completion: @escaping(Bool, String?) -> ()) {
+    var request = URLRequest(url: url)
+    if let jwt = jwt {
+      request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
+      print("using JWT: ", jwt)
+    }
+    let getTask = urlSession.dataTask(with: request) { data, response, error in
       if let err = error {
         completion(false, "network error: \(err)")
         return
@@ -90,8 +91,32 @@ class ApiWorker {
           completion(true, dataString)
         }
       }
-    })
-    getTask?.resume()
+    }
+    getTask.resume()
+  }
+  
+  func getData(url: URL, jwt: String?, completion: @escaping(Bool, Data?) -> ()) {
+    var request = URLRequest(url: url)
+    if let jwt = jwt {
+      request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
+      print("using JWT: ", jwt)
+    }
+    let getTask = urlSession.dataTask(with: request) { data, response, error in
+      if let err = error {
+        print("network error: ", err)
+        completion(false, nil)
+        return
+      }
+      guard let res = response as? HTTPURLResponse, res.statusCode == 200, let data = data else {
+        print("server error")
+        completion(false, nil)
+        return
+      }
+      DispatchQueue.main.async {
+        completion(true, data)
+      }
+    }
+    getTask.resume()
   }
   
 }

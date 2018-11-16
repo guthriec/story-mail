@@ -12,6 +12,7 @@ import UIKit
 struct PageData {
   var backgroundImagePNG: UIImage
   var timeString: String
+  var authorName: String
 }
 
 class StoryListTableViewModel {
@@ -27,16 +28,30 @@ class StoryListTableViewModel {
     self.managedStoryList.add(onStoryChangeFn: onStoryChange)
   }
   
-  func getPageData(fromManaged page: PageMO) -> PageData? {
+  private func getPageData(fromManaged page: PageMO) -> PageData? {
     let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "h:mm a"
-    let timeString = dateFormatter.string(from: page.timestamp! as Date)
+    let date = page.timestamp! as Date
+    var timeString = ""
+    if Calendar.current.isDateInToday(date) {
+      dateFormatter.dateFormat = "h: mm a"
+      timeString = dateFormatter.string(from: date)
+    } else if Calendar.current.isDateInYesterday(date) {
+      timeString = "Yesterday"
+    } else {
+      dateFormatter.dateFormat = "MM/dd/YY"
+      timeString = dateFormatter.string(from: date)
+    }
     guard let backgroundImage = page.getBackgroundImage() else {
       print("getBackgroundImage failed")
       return nil
     }
+    guard let authorName = page.authorName() else {
+      print("couldn't get author name")
+      return nil
+    }
     return PageData(backgroundImagePNG: backgroundImage,
-                    timeString: timeString)
+                    timeString: timeString,
+                    authorName: authorName)
   }
   
   func numManagedStories() -> Int {
@@ -92,4 +107,10 @@ class StoryListTableViewModel {
     }
     stateController.unArchiveStory(id: storyId)
   }
+  
+  func contributorsTextAt(index i: Int) -> String {
+    print("story: ", self.managedStoryList.managedStories[i])
+    return self.managedStoryList.managedStories[i].contributorUsernames().joined(separator: ", ")
+  }
+  
 }

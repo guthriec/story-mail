@@ -8,11 +8,11 @@
 
 import Foundation
 
+struct Resource: Codable {
+  let data: Data
+}
+
 class ResourceUploader {
-  struct Resource: Codable {
-    let data: Data
-  }
-  
   struct ResourceResult: Decodable {
     let success: Bool
     let resourceId: String

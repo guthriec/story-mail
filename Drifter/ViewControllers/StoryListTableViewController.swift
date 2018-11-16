@@ -22,6 +22,8 @@ class StoryListTableViewCell: UITableViewCell {
   weak var delegate: StoryCellDelegate?
   var storyId: String?
   
+  @IBOutlet weak var contributorsLabel: UILabel!
+  
   @IBAction func archiveStory(_ sender: Any) {
     delegate?.archiveCell(delegatedFrom: self)
   }
@@ -147,6 +149,7 @@ class StoryListTableViewController: UITableViewController {
     cell.setStoryTag(forRow: indexPath.item)
     cell.setStoryLayoutDelegate(delegate: self)
     cell.storyId = viewModel.managedStoryIdAt(index: indexPath.item)
+    cell.contributorsLabel.text = viewModel.contributorsTextAt(index: indexPath.item)
     cell.delegate = self
     return cell
   }
@@ -182,17 +185,23 @@ extension StoryListTableViewController: UICollectionViewDataSource {
       print("cell content view not an imageView!")
       return cell
     }
-    guard let timestampView = cell.contentView.subviews[1].subviews[0] as? UILabel else {
-      print("selected view is not the label you were looking for")
+    guard let timestampLabel = cell.contentView.subviews[1].subviews[0] as? UILabel else {
+      print("selected view is not the timestamp label you were looking for")
+      return cell
+    }
+    guard let authorLabel = cell.contentView.subviews[2].subviews[0] as? UILabel else {
+      print("selected view is not the author label you were looking for")
       return cell
     }
     let page = viewModel.nthPageInManagedStoryAt(storyIndex: collectionView.tag, pageIndex: indexPath.item)
-    guard let image = page?.backgroundImagePNG, let timestamp = page?.timeString else {
-      print("no image supplied")
+    guard let image = page?.backgroundImagePNG, let timestamp = page?.timeString,
+      let authorName = page?.authorName else {
+      print("not enough page data supplied")
       return cell
     }
     imageView.image = image
-    timestampView.text = timestamp
+    timestampLabel.text = timestamp
+    authorLabel.text = authorName
     return cell
   }
 }

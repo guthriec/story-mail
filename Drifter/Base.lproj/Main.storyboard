@@ -420,6 +420,7 @@
                                 </tableViewCellContentView>
                                 <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <connections>
+                                    <outlet property="contributorsLabel" destination="5w5-ut-cgM" id="QEn-Ae-9lJ"/>
                                     <outlet property="storyCollectionView" destination="26l-eC-GwT" id="O3W-Ql-uya"/>
                                 </connections>
                             </tableViewCell>
@@ -980,6 +981,7 @@
                                 </tableViewCellContentView>
                                 <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <connections>
+                                    <outlet property="contributorsLabel" destination="ZEZ-g1-Y69" id="eK8-dE-YxK"/>
                                     <outlet property="storyCollectionView" destination="a5y-MM-omq" id="kfy-6K-sHW"/>
                                 </connections>
                             </tableViewCell>

@@ -107,7 +107,7 @@ class StateController {
     managedInboxStories.clearStories()
     archivedStories.clearStories()
 
-    guard let username = activeUsername else {
+    guard let username = activeUsername, let activeUser = activeUser else {
       print("no active user")
       return
     }
@@ -128,7 +128,9 @@ class StateController {
     } catch let error as NSError {
       print("Could not fetch. \(error), \(error.userInfo)")
     }
-    
+    print("Fetching remote stories")
+    let storySynchronizer = StorySynchronizer(localUser: activeUser, stateController: self)
+    storySynchronizer.pullRemoteStories()
     managedInboxStories.sortStories()
     archivedStories.sortStories()
   }
@@ -153,19 +155,34 @@ class StateController {
     fetchStoriesForActiveUser()
   }
   
-  func createNewPage(backgroundPNG: Data, timestamp: Date) throws -> PageMO {
+  func createNewPage(backgroundPNG: Data, timestamp: Date, authorName: String) -> PageMO? {
+    guard let author = fetchUserByName(username: authorName) else {
+      print("Could not get user with that author's name")
+      return nil
+    }
     let pageEntity = NSEntityDescription.entity(forEntityName: "Page", in: managedContext)!
     let newManagedPage = PageMO(entity: pageEntity, insertInto: managedContext)
     do {
       try newManagedPage.setBackgroundImage(backgroundImagePNG: backgroundPNG)
     } catch {
       print(error)
-      throw StateError.couldNotCreate
+      return nil
     }
     newManagedPage.setValue(timestamp, forKey: "timestamp")
-    newManagedPage.setValue(self.activeUser!, forKey: "author")
-    self.persistData()
+    newManagedPage.setValue(author, forKey: "author")
     return newManagedPage
+  }
+  
+  func createNewPage(backgroundPNG: Data, timestamp: Date) throws -> PageMO {
+    guard let currentUsername = activeUsername else {
+      print("No logged in user")
+      throw StateError.noLoggedInUser
+    }
+    guard let newPage = createNewPage(backgroundPNG: backgroundPNG,
+                                      timestamp: timestamp, authorName: currentUsername) else {
+      throw StateError.couldNotCreate
+    }
+    return newPage
   }
   
   func createNewStory(withPages pages: Array<PageMO>) -> StoryMO {
@@ -185,6 +202,18 @@ class StateController {
     //print("original count: ", self.managedInboxStories.managedStories.count)
     //print("later count: ", self.managedInboxStories.managedStories.count)
     return newManagedStory
+  }
+  
+  func findOrCreateStory(withId id: String) -> StoryMO {
+    guard let existingStory = managedStoryById(id: id) else {
+      let storyEntity = NSEntityDescription.entity(forEntityName: "Story", in: managedContext)!
+      let newManagedStory = StoryMO(entity: storyEntity, insertInto: managedContext)
+      newManagedStory.setValue(id, forKey: "id")
+      newManagedStory.setValue(false, forKey: "isArchived")
+      newManagedStory.setValue(Date.distantPast, forKey: "lastUpdated")
+      return newManagedStory
+    }
+    return existingStory
   }
   
   func addStoryToInbox(_ newStory: StoryMO) {
@@ -330,5 +359,6 @@ enum StateError: Swift.Error {
   case noReplyStorySet
   case noSuchStory
   case couldNotCreate
+  case noLoggedInUser
   case unknown
 }

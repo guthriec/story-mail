@@ -18,13 +18,24 @@ public class LocalUserMO: UserMO {
   }
   
   func assignRandomPassword() {
+    let password = randomString(length: 20).data(using: String.Encoding.utf8)
     let keychainQuery = [kSecClass as String: kSecClassGenericPassword,
                          kSecAttrAccount as String: self.value(forKey: "username"),
                          kSecAttrService as String: "Drifter Password",
-                         kSecValueData as String: randomString(length: 20).data(using: String.Encoding.utf8)]
+                         kSecValueData as String: password]
     let status = SecItemAdd(keychainQuery as CFDictionary, nil)
     guard status == errSecSuccess else {
-      print("failed to assign password")
+      print("failed to assign password with status: ", status)
+      let alreadyExistsQuery = [kSecClass as String: kSecClassGenericPassword,
+                                kSecAttrAccount as String: self.value(forKey: "username"),
+                                kSecAttrService as String: "Drifter Password"]
+      let updateAttr = [kSecValueData as String: password]
+      let updateStatus = SecItemUpdate(alreadyExistsQuery as CFDictionary, updateAttr as CFDictionary)
+      guard updateStatus == errSecSuccess else {
+        print("failed to update password with status: ", updateStatus)
+        return
+      }
+
       return
     }
   }
@@ -60,6 +71,15 @@ public class LocalUserMO: UserMO {
     let status = SecItemAdd(keychainQuery as CFDictionary, nil)
     guard status == errSecSuccess else {
       print("failed to save JWT with status: ", status)
+      let alreadyExistsQuery = [kSecClass as String: kSecClassGenericPassword,
+                                kSecAttrAccount as String: self.value(forKey: "username"),
+                                kSecAttrService as String: "Drifter Session Token"]
+      let updateAttr = [kSecValueData as String: token.data(using: String.Encoding.utf8)]
+      let updateStatus = SecItemUpdate(alreadyExistsQuery as CFDictionary, updateAttr as CFDictionary)
+      guard updateStatus == errSecSuccess else {
+        print("failed to update JWT with status: ", updateStatus)
+        return
+      }
       return
     }
   }

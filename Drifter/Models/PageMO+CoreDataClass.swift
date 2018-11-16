@@ -77,6 +77,18 @@ public class PageMO: NSManagedObject {
     }
   }
   
+  func authorName() -> String? {
+    guard let author = self.value(forKey: "author") as! UserMO? else {
+      print("no author found for page")
+      return nil
+    }
+    guard let authorName = author.value(forKey: "username") as! String? else {
+      print("no username found for page author")
+      return nil
+    }
+    return authorName
+  }
+  
   override public func prepareForDeletion() {
     print("successfully deleted image: ", self.deleteBackgroundImage())
   }

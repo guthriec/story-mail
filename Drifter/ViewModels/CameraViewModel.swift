@@ -70,10 +70,12 @@ class CameraViewModel {
   }
   
   func handleSend(completion: @escaping (Bool) -> ()) throws {
+    print("handle send being called")
     guard let imageData = capturedImageData else {
       throw CameraViewError.NoImageProvided
     }
     if isReplying() {
+      print("I think we're replying to a story...")
       do {
         try addReply(backgroundImagePNG: imageData)
       } catch {
@@ -83,9 +85,18 @@ class CameraViewModel {
       guard let activeUser = self.stateController.activeUser else {
         throw CameraViewError.NoActiveUser
       }
-      let storyStarter = StoryStarter(localUser: activeUser)
+      let storyStarter = StorySynchronizer(localUser: activeUser, stateController: stateController)
+      print("abuot to create a new story...")
       guard let newStory = createSinglePageStory(backgroundImagePNG: imageData) else {
         throw CameraViewError.NoStoryProvided
+      }
+      for contributorName in contributors {
+        guard let contributor = stateController.fetchUserByName(username: contributorName) else {
+          print("failed to fetch contributor")
+          continue
+        }
+        print("about to add to new story contributors...")
+        newStory.addToContributors(contributor)
       }
       storyStarter.startStory(story: newStory, completion: {(success) in
         if (success) {
