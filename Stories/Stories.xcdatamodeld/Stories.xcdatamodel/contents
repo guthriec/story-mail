@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="14460.32" systemVersion="18A391" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="LocalUser" representedClassName="LocalUserMO" parentEntity="User" syncable="YES">
+        <attribute name="lastAuthenticated" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="shouldBeDeleted" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES" syncable="YES"/>
+        <relationship name="ownStories" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Story" inverseName="owner" inverseEntity="Story" syncable="YES"/>
+    </entity>
+    <entity name="Page" representedClassName="PageMO" syncable="YES">
+        <attribute name="backgroundImageRelativePath" attributeType="String" syncable="YES"/>
+        <attribute name="id" attributeType="String" syncable="YES"/>
+        <attribute name="timestamp" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <relationship name="author" maxCount="1" deletionRule="Nullify" destinationEntity="User" inverseName="pages" inverseEntity="User" syncable="YES"/>
+        <relationship name="stories" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Story" inverseName="pages" inverseEntity="Story" syncable="YES"/>
+    </entity>
+    <entity name="Story" representedClassName="StoryMO" syncable="YES">
+        <attribute name="id" attributeType="String" syncable="YES"/>
+        <attribute name="isArchived" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="lastUpdated" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <relationship name="contributors" toMany="YES" deletionRule="Nullify" destinationEntity="User" inverseName="stories" inverseEntity="User" syncable="YES"/>
+        <relationship name="owner" maxCount="1" deletionRule="Nullify" destinationEntity="LocalUser" inverseName="ownStories" inverseEntity="LocalUser" syncable="YES"/>
+        <relationship name="pages" toMany="YES" deletionRule="Nullify" ordered="YES" destinationEntity="Page" inverseName="stories" inverseEntity="Page" syncable="YES"/>
+    </entity>
+    <entity name="User" representedClassName="UserMO" isAbstract="YES" syncable="YES">
+        <attribute name="username" attributeType="String" syncable="YES"/>
+        <relationship name="pages" optional="YES" toMany="YES" deletionRule="Deny" destinationEntity="Page" inverseName="author" inverseEntity="Page" syncable="YES"/>
+        <relationship name="stories" optional="YES" toMany="YES" deletionRule="Deny" destinationEntity="Story" inverseName="contributors" inverseEntity="Story" syncable="YES"/>
+    </entity>
+    <elements>
+        <element name="LocalUser" positionX="-36" positionY="9" width="128" height="90"/>
+        <element name="Page" positionX="-54" positionY="-9" width="128" height="120"/>
+        <element name="Story" positionX="-18" positionY="27" width="128" height="135"/>
+        <element name="User" positionX="-63" positionY="-18" width="128" height="90"/>
+    </elements>
+</model>
