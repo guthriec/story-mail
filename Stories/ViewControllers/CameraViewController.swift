@@ -32,6 +32,9 @@ class CameraViewController: UIViewController, UITableViewDelegate {
   @IBOutlet weak var newStoryContributors: UITableView!
   @IBOutlet weak var replyContributors: UITableView!
   
+  override var prefersStatusBarHidden: Bool {
+    return true
+  }
   
   var confirmationView: UIView! {
     if isReplying {
@@ -102,13 +105,17 @@ class CameraViewController: UIViewController, UITableViewDelegate {
       DispatchQueue.main.async {
         self.view.addSubview(self.confirmationView)
       }
-      //self.performSegue(withIdentifier: "CameraToStoryList", sender: nil)
     })
   }
   
   @IBAction func showInbox(_ sender: Any) {
     self.performSegue(withIdentifier: "CameraToStoryList", sender: nil)
   }
+  
+  @IBAction func touchUpRetake(_ sender: Any) {
+    self.confirmationView.removeFromSuperview()
+  }
+  
     
   @IBAction func touchUpSend(_ sender: Any) {
     do {
@@ -198,6 +205,10 @@ class CameraViewController: UIViewController, UITableViewDelegate {
         self.contributorSearchResults.reloadData()
       }
     })
+    
+    // Increase font on search bar
+    //let largerTextAttrs = [NSAttributedString.Key.font: UIFont.systemFont(ofSize: 18.0, weight: .medium)]
+    //UITextField.appearance(whenContainedInInstancesOf: [UISearchBar.self]).defaultTextAttributes = largerTextAttrs
 
   }
 
@@ -310,20 +321,23 @@ class ContributorTableDataSource : NSObject, UITableViewDataSource {
   
   func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
     //print("number of contributors should be: ", viewModel.numContributors())
-    return viewModel.numContributors()
+    return viewModel.numContributors() + 1
   }
   
   func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    if (indexPath.item == 0) {
+      return tableView.dequeueReusableCell(withIdentifier: "CurrentUserContributor", for: indexPath)
+    }
     let cell = tableView.dequeueReusableCell(withIdentifier: "Contributor",
                                              for: indexPath) as! ContributorCell
-    cell.username = viewModel.contributorAt(indexPath.item)
+    cell.username = viewModel.contributorAt(indexPath.item - 1)
     cell.usernameLabel?.text = cell.username
     cell.delegate = self.cellDelegate
     return cell
   }
   
   func numberOfSections(in tableView: UITableView) -> Int {
-    if (viewModel.numContributors() > 0) {
+    if (viewModel.numContributors() + 1 > 0) {
       return 1
     } else {
       return 0

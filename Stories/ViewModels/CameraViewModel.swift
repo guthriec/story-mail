@@ -8,6 +8,7 @@
 
 import Foundation
 import UIKit
+import CoreData
 
 class CameraViewModel {
   private var stateController: StateController!
@@ -133,10 +134,30 @@ class CameraViewModel {
   
   func searchUsersFor(_ username: String, completion: @escaping (Bool) -> ()) {
     //print("in searchUsersFor")
+    let context = self.stateController.managedContext
+    let userFetchRequest = NSFetchRequest<UserMO>(entityName: "User")
+    if (username.count > 0) {
+      userFetchRequest.predicate = NSPredicate(format: "username CONTAINS %@", username)
+    }
+    //TODO: Fetch limit
+    //print("story fetch request: ", storyFetchRequest)
+    var userResults = Array<UserMO>()
+    do {
+      userResults = try context.fetch(userFetchRequest)
+    } catch let error as NSError {
+      print("Could not fetch. \(error), \(error.userInfo)")
+    }
+    print("Fetched users for username: ", userResults)
+    let usernameResults = userResults.map { $0.username! }
+    self.contributorResults = usernameResults.filter { $0 != self.stateController.activeUsername }
     do {
       try userSearcher.findMatchingUsers(username, completion: { results in
         //print("in userSearcher.findMatchingUsers completion with results: ", results)
-        self.contributorResults = results.filter { $0 != self.stateController.activeUsername }
+        for remoteResult in results {
+          if !self.contributorResults.contains(remoteResult) && remoteResult != self.stateController.activeUsername {
+            self.contributorResults.append(remoteResult)
+          }
+        }
         completion(true)
       })
     } catch {
@@ -158,7 +179,10 @@ class CameraViewModel {
       return
     }
     if (!contributors.contains(username)) {
-      contributors.append(username)
+      guard let savedUsername = userSearcher.saveSearchResult(username: username, stateController: self.stateController)?.username! else {
+        return
+      }
+      contributors.append(savedUsername)
     } else {
       contributors = contributors.filter { $0 != username }
     }

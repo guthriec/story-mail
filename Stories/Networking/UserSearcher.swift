@@ -7,25 +7,25 @@
 //
 
 import Foundation
+import CoreData
 
 class UserSearcher {
   struct UserSearchResult: Decodable {
     let id: String
     let username: String
-    let version: Int
+    let firstName: String
+    let lastName: String
     
     enum CodingKeys: String, CodingKey {
       case id = "_id"
       case username = "username"
-      case version = "__v"
+      case firstName = "firstName"
+      case lastName = "lastName"
     }
   }
 
-  let apiWorker: ApiWorker
-  
-  init() {
-    self.apiWorker = ApiWorker()
-  }
+  let apiWorker = ApiWorker()
+  var currentSearchResults = [String : UserSearchResult]()
   
   func isUsernameAvailable() -> Bool {
     return false
@@ -46,10 +46,23 @@ class UserSearcher {
         completion([])
         return
       }
+      for res in searchRes {
+        self.currentSearchResults[res.username] = res
+      }
       let names = searchRes.map { $0.username }
       completion(names)
     })
   }
+  
+  func saveSearchResult(username: String, stateController: StateController) -> UserMO? {
+    guard let searchResult = currentSearchResults[username] else {
+      print("No search result with that username")
+      return nil
+    }
+    return stateController.createAndSaveRemoteUser(username: username,
+                                                   firstName: searchResult.firstName,
+                                                   lastName: searchResult.lastName)
+  }  
 }
 
 enum UserSearcherError: Error {

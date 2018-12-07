@@ -47,6 +47,9 @@ class StateController {
     return activeUserStoryById(id: storyId)
   }
   
+  var currentStory: StoryMO?
+  var storyViewerIndex: Int?
+  
   init() {
     let appDelegate = UIApplication.shared.delegate as! AppDelegate
     managedContext = appDelegate.persistentContainer.viewContext
@@ -135,15 +138,18 @@ class StateController {
     return newUser
   }
   
-  func createAndSaveRemoteUser(name: String) -> UserMO {
-    if let existingUser = fetchUserByName(username: name) {
+  func createAndSaveRemoteUser(username: String, firstName: String, lastName: String) -> UserMO {
+    if let existingUser = fetchUserByName(username: username) {
       print("User already exists...")
       return existingUser
     }
     let userEntity = NSEntityDescription.entity(forEntityName: "User", in: managedContext)!
     let newUser = UserMO(entity: userEntity, insertInto: managedContext)
     
-    newUser.setValue(name, forKey: "username")
+    newUser.setValue(username, forKey: "username")
+    newUser.setValue(firstName, forKey: "firstName")
+    newUser.setValue(lastName, forKey: "lastName")
+
     self.persistData()
     return newUser
   }
@@ -225,7 +231,9 @@ class StateController {
       print("Could not fetch. \(error), \(error.userInfo)")
     }
     let storySynchronizer = StorySynchronizer(localUser: activeUser, stateController: self)
-    storySynchronizer.pullRemoteStories()
+    storySynchronizer.pullRemoteStories(completion: {success in
+      return
+    })
     managedInboxStories.sortStories()
     archivedStories.sortStories()
   }
@@ -233,9 +241,10 @@ class StateController {
   // MARK: story utilities
   
   func createNewPage(backgroundPNG: Data, timestamp: Date, authorName: String) -> PageMO? {
-    guard let author = fetchUserByName(username: authorName) else {
+    var author = fetchUserByName(username: authorName)
+    if author == nil {
       print("Could not get user with that authorName: ", authorName)
-      return nil
+      author = createAndSaveRemoteUser(username: authorName, firstName: "", lastName: "")
     }
     let pageEntity = NSEntityDescription.entity(forEntityName: "Page", in: managedContext)!
     let newManagedPage = PageMO(entity: pageEntity, insertInto: managedContext)
@@ -381,7 +390,7 @@ class StateController {
   func addContributorsToStoryByUsername(story: StoryMO, usernames: Array<String>) {
     for username in usernames {
       guard let user = fetchUserByName(username: username) else {
-        story.addToContributors(createAndSaveRemoteUser(name: username))
+        print("This user is unknown.....")
         return
       }
       story.addToContributors(user)
@@ -406,11 +415,11 @@ class ManagedStoryList {
     }
   }
   
-  private var onStoryChangeFns: Array<(() -> ())?>
+  private var onStoryListChangeFns: Array<(() -> ())?>
 
   init() {
     managedStories = Array()
-    onStoryChangeFns = Array()
+    onStoryListChangeFns = Array()
   }
   
   func clearStories() {
@@ -418,8 +427,8 @@ class ManagedStoryList {
   }
   
   func onStoryListChange() {
-    for onStoryChangeFn in self.onStoryChangeFns {
-      onStoryChangeFn?()
+    for onStoryListChangeFn in self.onStoryListChangeFns {
+      onStoryListChangeFn?()
     }
   }
   
@@ -434,8 +443,8 @@ class ManagedStoryList {
     }
   }
   
-  func add(onStoryChangeFn storyChangeFn: (() -> ())?) {
-    self.onStoryChangeFns.append(storyChangeFn)
+  func add(onStoryListChangeFn storyListChangeFn: (() -> ())?) {
+    self.onStoryListChangeFns.append(storyListChangeFn)
   }
   
   func sortStories() {

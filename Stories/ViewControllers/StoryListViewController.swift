@@ -74,5 +74,9 @@ class StoryListViewController: UIViewController {
       let profile = segue.destination as! ProfileViewController
       profile.viewModel = self.viewModel.newProfileViewModel()
     }
+    if segue.destination is StoryViewController {
+      let story = segue.destination as! StoryViewController
+      story.viewModel = self.viewModel.newStoryViewModel()
+    }
   }
 }

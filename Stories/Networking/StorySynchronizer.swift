@@ -56,20 +56,20 @@ class StorySynchronizer {
     self.authenticator = Authenticator(localUser: self.localUser)
   }
   
-  private func newPagesForUpdate(_ update: StoryUpdate, resourceMap: [String : Data]) -> Array<PageMO> {
+  private func newPagesForUpdate(_ update: StoryUpdate, resourceMap: [String : Data]) -> Array<PageMO>? {
     var res = Array<PageMO>()
     print("extracting pages with resourceMap: ", resourceMap)
     for page in update.newPages {
       guard let backgroundData = resourceMap[page.backgroundResourceId] else {
         print("failed to extract image data from resource map", page.backgroundResourceId)
-        continue
+        return nil
       }
       guard let newPage = stateController.createNewPage(backgroundPNG: backgroundData,
                                                         timestamp: page.timestamp,
                                                         authorName: page.creator)
         else {
           print("failed to create new page")
-          continue
+          return nil
       }
       res.append(newPage)
     }
@@ -149,30 +149,34 @@ class StorySynchronizer {
   
   private func reauthenticateIfNecessary(completion: @escaping (Bool) -> ()) {
     var isAuthenticated = false
-    //print("accessing lastAuthenticated property: ", self.localUser.lastAuthenticated ?? "none")
+    print("accessing lastAuthenticated property: ", self.localUser.lastAuthenticated ?? "none")
     if let lastAuthenticated = self.localUser.lastAuthenticated {
       isAuthenticated = true
-      if (lastAuthenticated.timeIntervalSinceNow > 60*60*23) {
+      print("Time interval...", abs(lastAuthenticated.timeIntervalSinceNow))
+      if (abs(lastAuthenticated.timeIntervalSinceNow) > 60*60*23) {
         isAuthenticated = false
       }
     }
+    print("after checking last authenticated, we think we are authenticated: ", isAuthenticated)
     if (!isAuthenticated) {
       authenticator.authenticate(completion: { success in
-        //print("reauthenticated: ", success)
+        print("reauthenticated: ", success)
         completion(success)
       })
     } else {
+      print("should now be authenticated")
       completion(true)
     }
   }
   
-  func pullRemoteStories() {
+  func pullRemoteStories(completion: @escaping (Bool) -> ()) {
     //print("pulling remote stories")
     reauthenticateIfNecessary(completion: {success in
       //print("reauthenticated?: ", success)
       self.getMessages(completion: {(updates) in
         guard let updates = updates else {
           print("getMessages passed in nil")
+          completion(false)
           return
         }
         var multiResourceMap = [String : Data]()
@@ -187,6 +191,7 @@ class StorySynchronizer {
           self.getResources(messageId: messageId, completion: {(resourceMap) in
             guard let resourceMap = resourceMap else {
               print("getResources passed in nil")
+              completion(false)
               return
             }
             for (resourceId, data) in resourceMap {
@@ -200,7 +205,12 @@ class StorySynchronizer {
                 var pagesToAdd = Array<PageMO>()
                 var contributorsToAdd = Array<String>()
                 for update in updates {
-                  pagesToAdd.append(contentsOf: self.newPagesForUpdate(update, resourceMap: multiResourceMap))
+                  guard let newPages = self.newPagesForUpdate(update, resourceMap: multiResourceMap) else {
+                    print("Couldn't extract pages from update")
+                    completion(false)
+                    return
+                  }
+                  pagesToAdd.append(contentsOf: newPages)
                   contributorsToAdd.append(contentsOf: update.contributors)
                 }
                 do {
@@ -216,11 +226,11 @@ class StorySynchronizer {
               self.stateController.refreshStories()
               self.stateController.persistData()
               
-              for messageId in messageIds {
+              /*for messageId in messageIds {
                 _ = self.deleteMessage(messageId, completion: { success in
                   print("Message deleted: ", success)
                 })
-              }
+              }*/
             }
           })
         }
@@ -229,70 +239,78 @@ class StorySynchronizer {
   }
   
   func updateStory(story: StoryMO, completion: @escaping (Bool) -> ()) {
-    let storyPages = story.pages?.array as! Array<PageMO>
-    guard let mostRecentPage = storyPages.last else {
-      print("No most recently added page")
-      completion(false)
-      return
-    }
-    guard let pageBackground = mostRecentPage.getBackgroundImageData() else {
-      print("Could not get background image data of first page")
-      completion(false)
-      return
-    }
-    resourceUploader.uploadResource(pageBackground, from: localUser, completion: { (success, resourceId) in
-      if (!success) {
-        print("unknown resource upload error")
+    reauthenticateIfNecessary(completion: {success in
+      if(!success) {
+        print("couldn't reauthenticate")
         completion(false)
         return
-      } else {
-        guard let resourceId = resourceId else {
-          print("no resourceId provided after resource upload")
+      }
+      let storyPages = story.pages?.array as! Array<PageMO>
+      guard let mostRecentPage = storyPages.last else {
+        print("No most recently added page")
+        completion(false)
+        return
+      }
+      guard let pageBackground = mostRecentPage.getBackgroundImageData() else {
+        print("Could not get background image data of first page")
+        completion(false)
+        return
+      }
+      self.resourceUploader.uploadResource(pageBackground, from: self.localUser, completion: { (success, resourceId) in
+        if (!success) {
+          print("unknown resource upload error")
           completion(false)
           return
-        }
-        let creatorName = self.localUser.value(forKey: "username") as! String
-        let page = Page(id: mostRecentPage.value(forKey: "id") as! String,
-          timestamp: mostRecentPage.value(forKey: "timestamp") as! Date,
-          backgroundResourceId: resourceId,
-          creator: creatorName)
-        var contributors = story.contributorUsernames()
-        let storyUpdate = StoryUpdate(newPages: [page],
-                                      storyId: story.value(forKey: "id") as! String,
-                                      contributors: story.contributorUsernames())
-        do {
-          let payloadJson = try JSONEncoder().encode(storyUpdate)
-          guard let payloadString = String(data: payloadJson, encoding: String.Encoding.utf8) else {
-            print("could not formulate message payload string")
+        } else {
+          guard let resourceId = resourceId else {
+            print("no resourceId provided after resource upload")
             completion(false)
             return
           }
-          contributors = contributors.filter { $0 != creatorName }
-          var numSuccessfulMessages = 0
-          for contributor in contributors {
-            print("sending message to recipient: ", contributor)
-            self.messageSender.sendMessage(payloadString,
-                                           from: self.localUser,
-                                           to: contributor,
-                                           resourceIds: [resourceId],
-              completion: {(success, _) in
-                if (!success) {
-                  print("failed to send message")
-                  completion(false)
-                } else {
-                  numSuccessfulMessages += 1
-                  if (numSuccessfulMessages == contributors.count) {
-                    print("calling completion on update story")
-                    completion(true)
-                  }
-                }
+          let creatorName = self.localUser.value(forKey: "username") as! String
+          let page = Page(id: mostRecentPage.value(forKey: "id") as! String,
+                          timestamp: mostRecentPage.value(forKey: "timestamp") as! Date,
+                          backgroundResourceId: resourceId,
+                          creator: creatorName)
+          var contributors = story.contributorUsernames()
+          let storyUpdate = StoryUpdate(newPages: [page],
+                                        storyId: story.value(forKey: "id") as! String,
+                                        contributors: story.contributorUsernames())
+          do {
+            let payloadJson = try JSONEncoder().encode(storyUpdate)
+            guard let payloadString = String(data: payloadJson, encoding: String.Encoding.utf8) else {
+              print("could not formulate message payload string")
+              completion(false)
+              return
+            }
+            contributors = contributors.filter { $0 != creatorName }
+            var numSuccessfulMessages = 0
+            for contributor in contributors {
+              print("sending message to recipient: ", contributor)
+              self.messageSender.sendMessage(payloadString,
+                                             from: self.localUser,
+                                             to: contributor,
+                                             resourceIds: [resourceId],
+                                             completion: {(success, _) in
+                                              if (!success) {
+                                                print("failed to send message")
+                                                completion(false)
+                                              } else {
+                                                numSuccessfulMessages += 1
+                                                if (numSuccessfulMessages == contributors.count) {
+                                                  print("calling completion on update story")
+                                                  completion(true)
+                                                }
+                                              }
               })
+            }
+          } catch {
+            print("Error of questionable origin: ", error)
+            completion(false)
           }
-        } catch {
-          print("Error of questionable origin: ", error)
-          completion(false)
         }
-      }
+      })
+
     })
   }
 }

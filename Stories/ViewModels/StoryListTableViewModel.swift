@@ -9,53 +9,20 @@
 import Foundation
 import UIKit
 
-struct PageData {
-  var backgroundImagePNG: UIImage
-  var timeString: String
-  var authorName: String
-}
 
 class StoryListTableViewModel {
   var stateController: StateController
   var managedStoryList: ManagedStoryList
+  
+  var storyScrollMap = [String : Int]()
   
   init(stateController: StateController!, managedStoryList: ManagedStoryList) {
     self.stateController = stateController
     self.managedStoryList = managedStoryList
   }
   
-  func setOnStoryChange(_ onStoryChange: (() -> ())?) {
-    self.managedStoryList.add(onStoryChangeFn: onStoryChange)
-  }
-  
-  private func getPageData(fromManaged page: PageMO) -> PageData? {
-    let dateFormatter = DateFormatter()
-    let date = page.timestamp! as Date
-    var timeString = ""
-    if Calendar.current.isDateInToday(date) {
-      dateFormatter.dateFormat = "h:mm a"
-      timeString = dateFormatter.string(from: date)
-    } else if Calendar.current.isDateInYesterday(date) {
-      timeString = "Yesterday"
-    } else {
-      dateFormatter.dateFormat = "MM/dd/YY"
-      timeString = dateFormatter.string(from: date)
-    }
-    guard let backgroundImage = page.getBackgroundImage() else {
-      print("getBackgroundImage failed")
-      return nil
-    }
-    guard let authorName = page.authorName() else {
-      print("couldn't get author name")
-      return nil
-    }
-    var authorText = authorName
-    if authorText == stateController.activeUsername {
-      authorText = "You"
-    }
-    return PageData(backgroundImagePNG: backgroundImage,
-                    timeString: timeString,
-                    authorName: authorText)
+  func setOnStoryListChange(_ onStoryChange: (() -> ())?) {
+    self.managedStoryList.add(onStoryListChangeFn: onStoryChange)
   }
   
   func numManagedStories() -> Int {
@@ -82,7 +49,7 @@ class StoryListTableViewModel {
       print("couldn't get pageset")
       return nil
     }
-    return getPageData(fromManaged: pageSet[n] as! PageMO)
+    return PageData(fromManaged: pageSet[n] as! PageMO, activeUsername: stateController.activeUsername)
   }
     
   func setReplyId(storyId id: String) -> Void {
@@ -112,8 +79,29 @@ class StoryListTableViewModel {
   }
   
   func contributorsTextAt(index i: Int) -> String {
+    // better username caching
     let contributorUsernames = self.managedStoryList.managedStories[i].contributorUsernames()
-    return contributorUsernames.filter { $0 != stateController.activeUsername}.joined(separator: ", ")
+    let otherNames = contributorUsernames.filter { $0 != stateController.activeUsername}
+    if otherNames.count > 0 {
+      return otherNames.joined(separator: ", ")
+    } else {
+      return "(Just You)"
+    }
+  }
+ 
+  func lastPositionAt(storyIndex i: Int) -> Int {
+    let storyId = managedStoryIdAt(index: i)
+    guard let lastPosition = storyScrollMap[storyId] else {
+      let endPosition = numPagesInManagedStoryAt(index: i)
+      storyScrollMap[storyId] = endPosition
+      return endPosition
+    }
+    return lastPosition
   }
   
+  func setStoryViewerStartingPoint(storyId: String, pageIndex: Int) {
+    let story = stateController.activeUserStoryById(id: storyId)
+    stateController.currentStory = story
+    stateController.storyViewerIndex = pageIndex
+  }
 }

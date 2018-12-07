@@ -21,6 +21,8 @@
         <relationship name="pages" toMany="YES" deletionRule="Nullify" ordered="YES" destinationEntity="Page" inverseName="stories" inverseEntity="Page" syncable="YES"/>
     </entity>
     <entity name="User" representedClassName="UserMO" isAbstract="YES" syncable="YES">
+        <attribute name="firstName" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="lastName" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="username" attributeType="String" syncable="YES"/>
         <relationship name="pages" optional="YES" toMany="YES" deletionRule="Deny" destinationEntity="Page" inverseName="author" inverseEntity="Page" syncable="YES"/>
         <relationship name="stories" optional="YES" toMany="YES" deletionRule="Deny" destinationEntity="Story" inverseName="contributors" inverseEntity="Story" syncable="YES"/>
@@ -29,6 +31,6 @@
         <element name="LocalUser" positionX="-36" positionY="9" width="128" height="90"/>
         <element name="Page" positionX="-54" positionY="-9" width="128" height="120"/>
         <element name="Story" positionX="-18" positionY="27" width="128" height="135"/>
-        <element name="User" positionX="-63" positionY="-18" width="128" height="90"/>
+        <element name="User" positionX="-63" positionY="-18" width="128" height="120"/>
     </elements>
 </model>

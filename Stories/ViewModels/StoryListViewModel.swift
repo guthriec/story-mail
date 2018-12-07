@@ -43,4 +43,8 @@ class StoryListViewModel {
   func newProfileViewModel() -> ProfileViewModel {
     return ProfileViewModel(stateController)
   }
+  
+  func newStoryViewModel() -> StoryViewModel {
+    return StoryViewModel(stateController)
+  }
 }

@@ -14,8 +14,23 @@ protocol StoryCellDelegate: class {
   func deleteCell(delegatedFrom cell: StoryListTableViewCell)
   func archiveCell(delegatedFrom cell: StoryListTableViewCell)
   func sendCellToInbox(delegatedFrom cell: StoryListTableViewCell)
-
 }
+
+/*class StoryCollectionView: UICollectionView {
+ override func  {
+    super.layoutSubviews()
+    guard self.numberOfSections == 1 else {
+      return
+    }
+    let lastItemIndexPath = IndexPath(item: self.numberOfItems(inSection: 0) - 1,
+                                      section: 0)
+    print("In layout subviews with last index path: ", lastItemIndexPath)
+    self.scrollToItem(at: lastItemIndexPath,
+                                     at: .right,
+                                     animated: false)
+
+  }
+}*/
 
 class StoryListTableViewCell: UITableViewCell {
   @IBOutlet private weak var storyCollectionView: UICollectionView!
@@ -36,21 +51,22 @@ class StoryListTableViewCell: UITableViewCell {
     delegate?.sendCellToInbox(delegatedFrom: self)
   }
   
-  override func layoutSubviews() {
-    super.layoutSubviews()
-    guard storyCollectionView.numberOfSections == 1 else {
+  func scrollToPosition(index: Int) {
+    if index >= storyCollectionView.numberOfItems(inSection: 0) {
       return
     }
-    /* guard storyCollectionView.numberOfItems(inSection: 0) > 0 else {
-      return
-    } */
-    let lastItemIndexPath = IndexPath(item: storyCollectionView.numberOfItems(inSection: 0) - 1,
-                                      section: 0)
-    print("In layout subviews with last index path: ", lastItemIndexPath)
-    storyCollectionView.scrollToItem(at: lastItemIndexPath,
+    let itemIndexPath = IndexPath(item: index,
+                                  section: 0)
+    //print("In scrollToPosition with last index path: ", itemIndexPath)
+    storyCollectionView.scrollToItem(at: itemIndexPath,
                                      at: .right,
                                      animated: false)
   }
+  
+  func scrollToEnd() {
+    self.scrollToPosition(index: self.storyCollectionView.numberOfItems(inSection: 0) - 1)
+  }
+
   
   func setStoryTag(forRow row: Int) {
     storyCollectionView.tag = row
@@ -89,18 +105,49 @@ class ReplyCell: UICollectionViewCell {
   }
 }
 
+protocol PageCellDelegate: class {
+  func goToPage(delegatedFrom cell: PageCell)
+}
+
+class PageCell: UICollectionViewCell {
+  weak var delegate: PageCellDelegate?
+  var storyId: String?
+  var pageIndex: Int?
+  
+  @objc func imageTapDetected() {
+    delegate?.goToPage(delegatedFrom: self)
+  }
+}
+
 // MARK: ViewControllers
 class StoryListTableViewController: UITableViewController {
   var viewModel: StoryListTableViewModel!
   var tableViewCellIdentifier: String!
   var emptyText: String!
   
+  func scrollAllToEnd() {
+    let numRows = self.tableView.numberOfRows(inSection: 0)
+    for row in 0 ..< numRows {
+      print("looping through rows")
+      print(self.tableView.cellForRow(at: IndexPath(row: row, section: 0)) ?? "None")
+      guard let cell = self.tableView.cellForRow(at: IndexPath(row: row, section: 0)) as! StoryListTableViewCell? else {
+        print("Couldn't extract table cell")
+        continue
+      }
+      cell.scrollToEnd()
+    }
+  }
+  
   override func viewDidLoad() {
     super.viewDidLoad()
     tableView.allowsSelection = false
-    viewModel.setOnStoryChange({
+    DispatchQueue.main.async {
+      //self.scrollAllToEnd()
+    }
+    viewModel.setOnStoryListChange({
       DispatchQueue.main.async {
         self.tableView.reloadData()
+        //self.scrollAllToEnd()
       }
     })
   }
@@ -108,6 +155,7 @@ class StoryListTableViewController: UITableViewController {
   override func didReceiveMemoryWarning() {
     super.didReceiveMemoryWarning()
   }
+  
   
   // MARK: - Table view data source
   override func numberOfSections(in tableView: UITableView) -> Int {
@@ -137,6 +185,7 @@ class StoryListTableViewController: UITableViewController {
     }
     return res
   }
+
   
   override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
     return viewModel.numManagedStories()
@@ -146,15 +195,17 @@ class StoryListTableViewController: UITableViewController {
                           cellForRowAt indexPath: IndexPath) -> UITableViewCell {
     let cell = tableView.dequeueReusableCell(withIdentifier: tableViewCellIdentifier, for: indexPath)
       as! StoryListTableViewCell
-    cell.invalidateStoryLayout()
+    //cell.invalidateStoryLayout()
     cell.setStoryTag(forRow: indexPath.item)
     cell.setStoryLayoutDelegate(delegate: self)
     cell.storyId = viewModel.managedStoryIdAt(index: indexPath.item)
-    cell.contributorsLabel.text = viewModel.contributorsTextAt(index: indexPath.item)
+    cell.contributorsLabel.text = self.viewModel.contributorsTextAt(index: indexPath.item)
+    DispatchQueue.main.async {
+      cell.scrollToPosition(index: self.viewModel.lastPositionAt(storyIndex: indexPath.item))
+    }
     cell.delegate = self
     return cell
   }
-  
 }
 
 extension StoryListTableViewController: UICollectionViewDataSource {
@@ -172,16 +223,20 @@ extension StoryListTableViewController: UICollectionViewDataSource {
   func collectionView(_ collectionView: UICollectionView,
                       cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
     //print("calling cellForItemAt: ", indexPath, " with item number: ", indexPath.item)
-    if (indexPath.item == collectionView.numberOfItems(inSection: 0) - 1) {
+    let endIndex = collectionView.numberOfItems(inSection: 0) - 1
+
+    if (indexPath.item == endIndex) {
       let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "ReplyCell",
                                                     for: indexPath) as! ReplyCell
       cell.delegate = self
-      // cell.storyId = viewModel.storyIdAt(storyIndex: collectionView.tag)
       cell.storyId = viewModel.managedStoryIdAt(index: collectionView.tag)
       return cell
     }
     let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "StoryCell",
-                                                  for: indexPath)
+                                                  for: indexPath) as! PageCell
+    cell.delegate = self
+    cell.storyId = viewModel.managedStoryIdAt(index: collectionView.tag)
+    cell.pageIndex = indexPath.item
     guard let imageView = cell.contentView.subviews[0] as? UIImageView else {
       print("cell content view not an imageView!")
       return cell
@@ -194,15 +249,21 @@ extension StoryListTableViewController: UICollectionViewDataSource {
       print("selected view is not the author label you were looking for")
       return cell
     }
-    let page = viewModel.nthPageInManagedStoryAt(storyIndex: collectionView.tag, pageIndex: indexPath.item)
-    guard let image = page?.backgroundImagePNG, let timestamp = page?.timeString,
-      let authorName = page?.authorName else {
-      print("not enough page data supplied")
-      return cell
+    DispatchQueue.main.async {
+      let page = self.viewModel.nthPageInManagedStoryAt(storyIndex: collectionView.tag, pageIndex: indexPath.item)
+      guard let image = page?.backgroundImagePNG, let timestamp = page?.timeString,
+        let authorName = page?.authorName else {
+          print("not enough page data supplied")
+          return
+      }
+      imageView.image = image
+      // register tap recognizer
+      imageView.isUserInteractionEnabled = true
+      let singleTap = UITapGestureRecognizer(target: cell, action: #selector(PageCell.imageTapDetected))
+      imageView.addGestureRecognizer(singleTap)
+      timestampLabel.text = timestamp
+      authorLabel.text = authorName
     }
-    imageView.image = image
-    timestampLabel.text = timestamp
-    authorLabel.text = authorName
     return cell
   }
 }
@@ -228,10 +289,24 @@ extension StoryListTableViewController: ReplyCellDelegate {
   }
 }
 
+extension StoryListTableViewController: PageCellDelegate {
+  func goToPage(delegatedFrom cell: PageCell) {
+    guard let storyId = cell.storyId else {
+      return
+    }
+    guard let pageIndex = cell.pageIndex else {
+      return
+    }
+    viewModel.setStoryViewerStartingPoint(storyId: storyId, pageIndex: pageIndex)
+    parent?.performSegue(withIdentifier: "ShowStory", sender: nil)
+  }
+}
+
 extension StoryListTableViewController: StoryLayoutDelegate {
   func collectionView(_ collectionView: UICollectionView,
                       widthForCellAtIndexPath indexPath: IndexPath) -> CGFloat {
-    if (indexPath.item == collectionView.numberOfItems(inSection: 0) - 1) {
+    let endIndex = collectionView.numberOfItems(inSection: 0) - 1
+    if (indexPath.item == endIndex) {
       return CGFloat(70)
     } else {
       return CGFloat(147)

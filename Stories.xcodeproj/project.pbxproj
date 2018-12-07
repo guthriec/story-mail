@@ -44,6 +44,9 @@
 		5BDD262121938A220063264C /* LocalUserMO+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BDD261F21938A220063264C /* LocalUserMO+CoreDataClass.swift */; };
 		5BDD262221938A220063264C /* LocalUserMO+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BDD262021938A220063264C /* LocalUserMO+CoreDataProperties.swift */; };
 		5BDD262521939C680063264C /* ApiWorker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BDD262421939C680063264C /* ApiWorker.swift */; };
+		5BE3632D21B05AD100BFD6AB /* StoryViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BE3632C21B05AD100BFD6AB /* StoryViewController.swift */; };
+		5BE3632F21B05F4700BFD6AB /* StoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BE3632E21B05F4700BFD6AB /* StoryViewModel.swift */; };
+		5BE3633121B063B400BFD6AB /* PageData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BE3633021B063B400BFD6AB /* PageData.swift */; };
 		5BEC2EAD218B5DF5003DF20C /* SlideRightSegue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BEC2EAC218B5DF5003DF20C /* SlideRightSegue.swift */; };
 		5BEC2EAF218B6C10003DF20C /* SlideRightUnwindSegue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BEC2EAE218B6C10003DF20C /* SlideRightUnwindSegue.swift */; };
 		5BEC2EB1218D19E2003DF20C /* SignInViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BEC2EB0218D19E2003DF20C /* SignInViewController.swift */; };
@@ -75,7 +78,7 @@
 		5B0016E42181291E00B5E932 /* PageMO+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PageMO+CoreDataProperties.swift"; sourceTree = "<group>"; };
 		5B1FEC52219A3EF300FC70C3 /* AddContactsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddContactsViewController.swift; sourceTree = "<group>"; };
 		5B1FEC55219B632500FC70C3 /* UserSearcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSearcher.swift; sourceTree = "<group>"; };
-		5B4C8BE32134DCF000E8883D /* Stories.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Stories.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5B4C8BE32134DCF000E8883D /* DEBUG-Stories.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "DEBUG-Stories.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5B4C8BE62134DCF000E8883D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		5B4C8BE82134DCF000E8883D /* CameraViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewController.swift; sourceTree = "<group>"; };
 		5B4C8BEB2134DCF000E8883D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -112,6 +115,9 @@
 		5BDD261F21938A220063264C /* LocalUserMO+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LocalUserMO+CoreDataClass.swift"; sourceTree = "<group>"; };
 		5BDD262021938A220063264C /* LocalUserMO+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LocalUserMO+CoreDataProperties.swift"; sourceTree = "<group>"; };
 		5BDD262421939C680063264C /* ApiWorker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiWorker.swift; sourceTree = "<group>"; };
+		5BE3632C21B05AD100BFD6AB /* StoryViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryViewController.swift; sourceTree = "<group>"; };
+		5BE3632E21B05F4700BFD6AB /* StoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryViewModel.swift; sourceTree = "<group>"; };
+		5BE3633021B063B400BFD6AB /* PageData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageData.swift; sourceTree = "<group>"; };
 		5BEC2EAC218B5DF5003DF20C /* SlideRightSegue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideRightSegue.swift; sourceTree = "<group>"; };
 		5BEC2EAE218B6C10003DF20C /* SlideRightUnwindSegue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideRightUnwindSegue.swift; sourceTree = "<group>"; };
 		5BEC2EB0218D19E2003DF20C /* SignInViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInViewController.swift; sourceTree = "<group>"; };
@@ -170,7 +176,7 @@
 		5B4C8BE42134DCF000E8883D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				5B4C8BE32134DCF000E8883D /* Stories.app */,
+				5B4C8BE32134DCF000E8883D /* DEBUG-Stories.app */,
 				5B4C8BF72134DCFB00E8883D /* StoriesTests.xctest */,
 				5B4C8C022134DCFB00E8883D /* StoriesUITests.xctest */,
 			);
@@ -239,6 +245,7 @@
 				5BEC2EB0218D19E2003DF20C /* SignInViewController.swift */,
 				5BBC30A4217FBE77002B6D63 /* StoryListViewController.swift */,
 				5BBC30A2217FB88A002B6D63 /* StoryListTableViewController.swift */,
+				5BE3632C21B05AD100BFD6AB /* StoryViewController.swift */,
 				5B1FEC52219A3EF300FC70C3 /* AddContactsViewController.swift */,
 			);
 			path = ViewControllers;
@@ -252,6 +259,8 @@
 				5B6E4AFB2190E6EA003FABA0 /* SignInViewModel.swift */,
 				5BC46F14217F9AAB002BA8E6 /* StoryListViewModel.swift */,
 				5BC46F16217F9D64002BA8E6 /* StoryListTableViewModel.swift */,
+				5BE3632E21B05F4700BFD6AB /* StoryViewModel.swift */,
+				5BE3633021B063B400BFD6AB /* PageData.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -303,7 +312,7 @@
 			);
 			name = Stories;
 			productName = Drifter;
-			productReference = 5B4C8BE32134DCF000E8883D /* Stories.app */;
+			productReference = 5B4C8BE32134DCF000E8883D /* DEBUG-Stories.app */;
 			productType = "com.apple.product-type.application";
 		};
 		5B4C8BF62134DCFB00E8883D /* StoriesTests */ = {
@@ -420,6 +429,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5BE3632D21B05AD100BFD6AB /* StoryViewController.swift in Sources */,
 				5BEC2EAD218B5DF5003DF20C /* SlideRightSegue.swift in Sources */,
 				5B1FEC53219A3EF300FC70C3 /* AddContactsViewController.swift in Sources */,
 				5BC46F15217F9AAB002BA8E6 /* StoryListViewModel.swift in Sources */,
@@ -451,10 +461,12 @@
 				5B6E4B042190F1C0003FABA0 /* SlideLeftUnwindSegue.swift in Sources */,
 				5B0016E52181291E00B5E932 /* PageMO+CoreDataClass.swift in Sources */,
 				5B4C8BE72134DCF000E8883D /* AppDelegate.swift in Sources */,
+				5BE3633121B063B400BFD6AB /* PageData.swift in Sources */,
 				5B0016DD218126BF00B5E932 /* StoryMO+CoreDataClass.swift in Sources */,
 				5B0016E82181291E00B5E932 /* PageMO+CoreDataProperties.swift in Sources */,
 				5BC46F17217F9D64002BA8E6 /* StoryListTableViewModel.swift in Sources */,
 				5B703DD8219CE15700B28B4C /* ResourceUploader.swift in Sources */,
+				5BE3632F21B05F4700BFD6AB /* StoryViewModel.swift in Sources */,
 				5B1FEC56219B632500FC70C3 /* UserSearcher.swift in Sources */,
 				5BB5A20B214B27CD00B9E5B3 /* StateController.swift in Sources */,
 			);
@@ -544,8 +556,10 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 97FJ8J4YYZ;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -603,9 +617,11 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 97FJ8J4YYZ;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -628,18 +644,20 @@
 		5B4C8C0C2134DCFB00E8883D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				API_BASE_URL = "http://10.0.0.217:3000";
+				API_BASE_URL = "https://unstable-alpha-messenger.suncanyon.co";
+				APP_DISPLAY_NAME = "Stories DEBUG";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 8PS788PCA3;
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = 97FJ8J4YYZ;
 				INFOPLIST_FILE = Stories/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.suncanyon.Stories;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.shotech.Stories.debug;
+				PRODUCT_NAME = "DEBUG-$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = StoriesDebugDev;
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -648,18 +666,21 @@
 		5B4C8C0D2134DCFB00E8883D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				API_BASE_URL = "https://messenger.suncanyon.co";
+				API_BASE_URL = "https://unstable-alpha-messenger.suncanyon.co";
+				APP_DISPLAY_NAME = "Story Mail";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 8PS788PCA3;
+				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = 97FJ8J4YYZ;
 				INFOPLIST_FILE = Stories/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.suncanyon.Stories;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shotech.Stories.alpha;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = StoriesAlphaDist;
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = 1;
 			};

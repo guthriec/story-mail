@@ -52,4 +52,13 @@ class SignInViewModel {
   func localUsernames() -> Array<String>? {
     return stateController.localUserNames
   }
+  
+  let OKAY_CHARACTERS = "abcdefghijklmnopqrstuvwxyz0123456789"
+  
+  func allCharactersOkay(string: String) -> Bool {
+    let cs = NSCharacterSet(charactersIn: OKAY_CHARACTERS).inverted
+    let filtered = string.components(separatedBy: cs).joined(separator: "")
+    return (string == filtered)
+  }
+
 }
