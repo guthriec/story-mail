@@ -19,27 +19,32 @@ class ApiWorker {
     apiBase = env["API_BASE_URL"] as! String
   }
   
-  func urlOfEndpoint(_ endpointPath: String) -> URL? {
+  func urlOfEndpoint(_ endpointPath: String) throws -> URL {
     guard var urlComponents = URLComponents(string: apiBase) else {
-      print("could not initiate url components from api base")
-      return nil
+      throw APIError.URLConstructionError
     }
     urlComponents.path = endpointPath
-    return urlComponents.url
+    guard let res = urlComponents.url else {
+      throw APIError.URLConstructionError
+    }
+    return res
   }
   
-  func urlWithQuery(endpointPath: String, queryName: String, queryValue: String) -> URL? {
+  func urlWithQuery(endpointPath: String, queryName: String, queryValue: String) throws -> URL {
     // D.R.Y.
     guard var urlComponents = URLComponents(string: apiBase) else {
       print("could not initiate url components from api base")
-      return nil
+      throw APIError.URLConstructionError
     }
     urlComponents.path = endpointPath
     urlComponents.queryItems = [URLQueryItem(name: queryName, value: queryValue)]
-    return urlComponents.url
+    guard let res = urlComponents.url else {
+      throw APIError.URLConstructionError
+    }
+    return res
   }
   
-  func post(url: URL, uploadData: Data, jwt: String?, completion: @escaping (Bool, String?) -> ()) {
+  func post(url: URL, uploadData: Data, jwt: String?, completion: @escaping (ResponseStatus, String?) -> ()) {
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -48,48 +53,56 @@ class ApiWorker {
     }
     let postTask = urlSession.uploadTask(with: request, from: uploadData) { data, res, err in
       if let error = err {
-        completion(false, "network error: \(error)")
+        completion(.NoResponse, "network error: \(error)")
         return
       }
-      guard let res = res as? HTTPURLResponse, [200, 201].contains(res.statusCode) else {
-        guard let data = data, let dataString = String(data: data, encoding: .utf8) else {
-          completion(false, "server error")
-          return
-        }
-        completion(false, dataString)
+      guard let res = res as? HTTPURLResponse else {
+        completion(.NoResponse, "could not parse response as HTTPURLResponse")
         return
       }
-      if let data = data, let dataString = String(data: data, encoding: .utf8) {
-        DispatchQueue.main.async {
-          completion(true, dataString)
-        }
+      guard let data = data, let dataString = String(data: data, encoding: .utf8) else {
+        completion(.NoResponse, "could not parse data as String")
+        return
+      }
+      if res.statusCode == 200 {
+        completion(.ResourceFound, dataString)
+      } else if res.statusCode == 201 {
+        completion(.ResourceCreated, dataString)
+      } else if res.statusCode == 500 {
+        completion(.ServerError, dataString)
+      } else {
+        completion(.Unknown, dataString)
       }
     }
     postTask.resume()
   }
   
-  func get(url: URL, jwt: String?, completion: @escaping(Bool, String?) -> ()) {
+  func get(url: URL, jwt: String?, completion: @escaping(ResponseStatus, String?) -> ()) {
     var request = URLRequest(url: url)
     if let jwt = jwt {
       request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
     }
     let getTask = urlSession.dataTask(with: request) { data, response, error in
       if let err = error {
-        completion(false, "network error: \(err)")
+        completion(.NoResponse, "network error: \(err)")
         return
       }
-      guard let res = response as? HTTPURLResponse, res.statusCode == 200 else {
-        guard let data = data, let dataString = String(data: data, encoding: .utf8) else {
-          completion(false, "server error")
-          return
-        }
-        completion(false, dataString)
+      guard let res = response as? HTTPURLResponse else {
+        completion(.NoResponse, "could not parse response as HTTPURLResponse")
         return
       }
-      if let data = data, let dataString = String(data: data, encoding: .utf8) {
-        DispatchQueue.main.async {
-          completion(true, dataString)
-        }
+      guard let data = data, let dataString = String(data: data, encoding: .utf8) else {
+        completion(.NoResponse, "could not parse data as String")
+        return
+      }
+      if res.statusCode == 200 {
+        completion(.ResourceFound, dataString)
+      } else if res.statusCode == 404 {
+        completion(.NoResourceFound, dataString)
+      } else if res.statusCode == 500 {
+        completion(.ServerError, dataString)
+      } else {
+        completion(.Unknown, dataString)
       }
     }
     getTask.resume()
@@ -147,6 +160,15 @@ class ApiWorker {
     getTask.resume()
   }*/
   
+}
+
+enum ResponseStatus {
+  case ResourceFound
+  case NoResourceFound
+  case ResourceCreated
+  case ServerError
+  case NoResponse
+  case Unknown
 }
 
 enum APIError: Error {

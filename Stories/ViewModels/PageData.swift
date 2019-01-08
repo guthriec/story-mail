@@ -13,8 +13,14 @@ class PageData {
   var backgroundImagePNG: UIImage?
   var timeString: String?
   var authorName: String?
+  var status: PageStatus
   
-  init(fromManaged page: PageMO, activeUsername: String?) {
+  init(fromManaged page: PageMO, activeUsername: String?, status: PageStatus?) {
+    if let argStatus = status {
+      self.status = argStatus
+    } else {
+      self.status = .OK
+    }
     let dateFormatter = DateFormatter()
     let date = page.timestamp! as Date
     var timeString = ""
@@ -41,4 +47,10 @@ class PageData {
       self.authorName = authorText
     }
   }
+}
+
+enum PageStatus {
+  case Sending
+  case Error
+  case OK
 }

@@ -17,11 +17,20 @@ public class StoryMO: NSManagedObject {
     guard let timestamp = page.timestamp as Date? else {
       throw StoryError.PageNotTimestamped
     }
-    guard (timestamp > self.lastUpdated! as Date) else {
-      throw StoryError.PageOutOfOrder
+    for existingPage in self.pages ?? [] {
+      let existingPageMO = existingPage as! PageMO
+      //print("existing id: ", existingPageMO.value(forKey: "id") ?? "no id provided")
+      //print("new id: ", page.value(forKey: "id") ?? "no id provided")
+      if existingPageMO.value(forKey: "id") as! String == page.value(forKey: "id") as! String {
+        print("id match! ", existingPageMO.value(forKey: "id") ?? "nil...")
+        throw StoryError.PageAlreadyAdded
+      }
     }
+    //print("all ids clear...")
     self.addToPages(page)
-    self.setValue(timestamp, forKey: "lastUpdated")
+    if (timestamp > self.lastUpdated! as Date) {
+      self.setValue(timestamp, forKey: "lastUpdated")
+    }
     let author = page.value(forKey: "author") as! UserMO
     if (!self.contributors!.contains(author)) {
       self.addToContributors(author)
@@ -52,4 +61,5 @@ public class StoryMO: NSManagedObject {
 enum StoryError: Swift.Error {
   case PageOutOfOrder
   case PageNotTimestamped
+  case PageAlreadyAdded
 }

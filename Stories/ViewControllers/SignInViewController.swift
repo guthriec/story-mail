@@ -11,12 +11,23 @@ import UIKit
 class SignInViewController: UIViewController {
 
   @IBOutlet weak var usernameField: UITextField!
+  @IBOutlet weak var availabilityActivityIndicator: UIActivityIndicatorView!
+  @IBOutlet weak var availabilityDescription: UILabel!
+  @IBOutlet weak var availabilityIndicator: UIImageView!
+  
+  @IBOutlet weak var registrationActivityIndicator: UIActivityIndicatorView!
+  @IBOutlet weak var registrationIndicator: UIImageView!
+  @IBOutlet weak var registrationDescription: UILabel!
+  
+  @IBOutlet weak var getStartedButton: UIButton!
   
   var viewModel: SignInViewModel!
   
   override func viewDidLoad() {
     super.viewDidLoad()
     usernameField.delegate = self
+    hideAvailabilityResults()
+    hideRegistrationResults()
   }
   
  /* override func viewDidAppear(_ animated: Bool) {
@@ -28,14 +39,25 @@ class SignInViewController: UIViewController {
   } */
     
   @IBAction func getStartedTouchUp(_ sender: Any) {
-    viewModel.registerNewUser(name: usernameField.text, completion: {(success) in
-      if (success) {
-        self.performSegue(withIdentifier: "SignInToInbox", sender: nil)
+    getStartedButton.isEnabled = false
+    registrationActivityIndicator.startAnimating()
+    registrationDescription.text = "registering your username..."
+    registrationDescription.isHidden = false
+
+    viewModel.registerNewUser(name: usernameField.text, completion: {(status) in
+      DispatchQueue.main.async {
+        if (status == .Registered) {
+          self.performSegue(withIdentifier: "SignInToInbox", sender: nil)
+        } else {
+          self.getStartedButton.isEnabled = true
+          self.registrationActivityIndicator.stopAnimating()
+          self.showRegistrationResults(status: status)
+        }
       }
     })
   }
   
-  @IBAction func signInTouchUp(_ sender: Any) {
+  /*@IBAction func signInTouchUp(_ sender: Any) {
     let switchAccountsActionSheet = UIAlertController(title: "Select Account", message: nil,
                                                       preferredStyle: .actionSheet)
     var existingAccountActions = Array<UIAlertAction>()
@@ -57,15 +79,76 @@ class SignInViewController: UIViewController {
   }
   
   @IBAction func touchUpCreate(_ sender: Any) {
+    registrationActivityIndicator.startAnimating()
+    registrationDescription.text = "registering your username..."
+    registrationDescription.isHidden = false
+
     viewModel.registerNewUser(name: usernameField.text, completion: {(success) in
+      self.registrationActivityIndicator.stopAnimating()
+      self.showRegistrationResults()
       if (success) {
         self.performSegue(withIdentifier: "CreateToProfile", sender: nil)
       }
     })
-  }
+  } */
   
   @IBAction func goBackTouchUp(_ sender: Any) {
     self.performSegue(withIdentifier: "CreateToProfile", sender: nil)
+  }
+  
+  
+  
+  func hideRegistrationResults() {
+    registrationIndicator.isHidden = true
+    registrationDescription.isHidden = true
+  }
+  
+  func hideAvailabilityResults() {
+    availabilityDescription.isHidden = true
+    availabilityIndicator.isHidden = true
+  }
+  
+  func showRegistrationResults(status: RegistrationStatus) {
+    if status == .AlreadyRegistered {
+      registrationDescription.text = "username not available"
+    } else if status == .NetworkError {
+      registrationDescription.text = "error connecting to server"
+    } else {
+      registrationDescription.text = "an unknown error occurred..."
+    }
+    registrationDescription.isHidden = false
+    registrationIndicator.isHidden = false
+  }
+  
+  func showAvailabilityResults(status: AvailabilityStatus) {
+    if status == .Available {
+      // TODO: move this logic to viewmodel
+      availabilityDescription.text = "username available"
+      availabilityIndicator.image = UIImage(named: "CheckIconGreen")
+    } else if status == .Unavailable {
+      availabilityDescription.text = "username not available"
+      availabilityIndicator.image = UIImage(named: "CrossIconRed")
+    } else if status == .NetworkError {
+      availabilityDescription.text = "error connecting to server"
+      availabilityIndicator.image = UIImage(named: "CrossIconRed")
+    } else if status == .UnknownError {
+      availabilityDescription.text = "an unknown error occurred..."
+      availabilityIndicator.image = UIImage(named: "CrossIconRed")
+    }
+    availabilityDescription.isHidden = false
+    availabilityIndicator.isHidden = false
+  }
+  
+  func checkAvailability() {
+    availabilityActivityIndicator.startAnimating()
+    availabilityDescription.text = "checking username availability..."
+    availabilityDescription.isHidden = false
+    viewModel.checkUsernameAvailable(name: usernameField.text, completion: {(status) in
+      DispatchQueue.main.async {
+        self.availabilityActivityIndicator.stopAnimating()
+        self.showAvailabilityResults(status: status)
+      }
+    })
   }
   
   // MARK: - Navigation
@@ -82,12 +165,12 @@ class SignInViewController: UIViewController {
 
 extension SignInViewController: UITextFieldDelegate {
   func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-    print("in textFieldShouldReturn")
     textField.resignFirstResponder()
+    checkAvailability()
     return true
   }
   func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
-    print("in textFieldShouldBeginEditing")
+    hideAvailabilityResults()
     return true
   }
   

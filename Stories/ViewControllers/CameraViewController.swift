@@ -119,10 +119,9 @@ class CameraViewController: UIViewController, UITableViewDelegate {
     
   @IBAction func touchUpSend(_ sender: Any) {
     do {
+      self.performSegue(withIdentifier: "CameraToStoryList", sender: nil)
       try viewModel.handleSend(completion: {(success) in
-        if (success) {
-          self.performSegue(withIdentifier: "CameraToStoryList", sender: nil)
-        }
+        print("handleSend success: ", success)
       })
     } catch {
       print("error in handle send: ", error)
@@ -161,6 +160,7 @@ class CameraViewController: UIViewController, UITableViewDelegate {
       try? self.cameraWorker.displayPreview(insideOf: self.capturePreview)
     }
     
+    //TODO: Confirmation view to safe area
     confirmationView.frame = self.view.frame
     
     // Get rid of extra separators
@@ -202,7 +202,9 @@ class CameraViewController: UIViewController, UITableViewDelegate {
       if (!success) {
         print("Initial search failed!")
       } else {
-        self.contributorSearchResults.reloadData()
+        DispatchQueue.main.async {
+          self.contributorSearchResults.reloadData()
+        }
       }
     })
     
@@ -235,13 +237,22 @@ class ContributorSearchResultsCell: UITableViewCell {
 
 extension CameraViewController : UITableViewDataSource {
   func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    return viewModel.numSearchResults()
+    if (section == 0) {
+      return viewModel.numMatchingContacts()
+    } else {
+      return viewModel.numSearchResults()
+    }
   }
   
   func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
     let cell = tableView.dequeueReusableCell(withIdentifier: "ContributorSearchResult",
                                              for: indexPath) as! ContributorSearchResultsCell
-    cell.username = viewModel.contributorResultAt(indexPath.item)
+    if (indexPath.section == 0) {
+      cell.username = viewModel.matchingContactResultAt(indexPath.row)
+    } else {
+      cell.username = viewModel.contributorResultAt(indexPath.row)
+    }
+    
     cell.usernameLabel?.text = cell.username
     if (viewModel.isContributor(cell.username)) {
       let alreadyAddedImage = UIImage(named: "CheckIcon") as UIImage?
@@ -256,16 +267,29 @@ extension CameraViewController : UITableViewDataSource {
   
   func numberOfSections(in tableView: UITableView) -> Int {
     if (viewModel.numSearchResults() > 0) {
-      return 1
+      return 2
     } else {
-      return 0
+      return 1
+    }
+  }
+  
+  func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+    if (section == 0) {
+      return "Contacts"
+    } else {
+      return "Other Users"
     }
   }
 }
 
 extension CameraViewController : ContributorSearchResultsCellDelegate {
   func toggleContributor(delegatedFrom cell: ContributorSearchResultsCell) {
-    self.viewModel.toggleContributor(cell.username)
+    do {
+      try self.viewModel.toggleContributor(cell.username)
+    } catch {
+      //TODO: handle error
+      print(error)
+    }
   }
 }
 
@@ -275,7 +299,9 @@ extension CameraViewController : UISearchBarDelegate {
       if (!success) {
         print("Search failed!")
       } else {
-        self.contributorSearchResults.reloadData()
+        DispatchQueue.main.async {
+          self.contributorSearchResults.reloadData()
+        }
       }
     })
   }

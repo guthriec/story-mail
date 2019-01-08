@@ -12,75 +12,91 @@ import UIKit
 
 class StoryListTableViewModel {
   var stateController: StateController
-  var managedStoryList: ManagedStoryList
+  var storyList: StoryList
   
   var storyScrollMap = [String : Int]()
   
-  init(stateController: StateController!, managedStoryList: ManagedStoryList) {
+  init(stateController: StateController!, storyList: StoryList) {
     self.stateController = stateController
-    self.managedStoryList = managedStoryList
+    self.storyList = storyList
   }
   
   func setOnStoryListChange(_ onStoryChange: (() -> ())?) {
-    self.managedStoryList.add(onStoryListChangeFn: onStoryChange)
+    self.storyList.add(onStoryListChangeFn: onStoryChange)
   }
   
-  func numManagedStories() -> Int {
-    return self.managedStoryList.managedStories.count
+  func numStories() -> Int {
+    return self.storyList.extendedStories.count
   }
   
-  func numPagesInManagedStoryAt(index i: Int) -> Int {
-    if (self.managedStoryList.managedStories.indices.contains(i)) {
-      guard let pageSet = self.managedStoryList.managedStories[i].pages else {
-        return 0
+  func numPagesInExtendedStoryAt(index i: Int) -> Int {
+    if (self.storyList.extendedStories.indices.contains(i)) {
+      let extendedStory = self.storyList.extendedStories[i]
+      var pendingPagesCount = 0
+      if let pendingPages = extendedStory.pendingPages {
+        pendingPagesCount = pendingPages.count
       }
-      return pageSet.count
+      guard let pageSet = extendedStory.story.pages else {
+        return pendingPagesCount
+      }
+      return pageSet.count + pendingPagesCount
     } else {
       return 0
     }
   }
   
-  func managedStoryIdAt(index i: Int) -> String {
-    return self.managedStoryList.managedStories[i].id!
+  func extendedStoryIdAt(index i: Int) -> String {
+    return self.storyList.extendedStories[i].story.id!
   }
   
-  func nthPageInManagedStoryAt(storyIndex i: Int, pageIndex n: Int) -> PageData? {
-    guard let pageSet = self.managedStoryList.managedStories[i].pages else {
+  func nthPageInExtendedStoryAt(storyIndex i: Int, pageIndex n: Int) -> PageData? {
+    let currentStory = self.storyList.extendedStories[i]
+    guard let pageSet = currentStory.story.pages else {
       print("couldn't get pageset")
       return nil
     }
-    return PageData(fromManaged: pageSet[n] as! PageMO, activeUsername: stateController.activeUsername)
-  }
-    
-  func setReplyId(storyId id: String) -> Void {
-    stateController.replyingToStoryId = id
+    // TODO: this should be factored out somewhere
+    if n < pageSet.count {
+      return PageData(fromManaged: pageSet[n] as! PageMO, activeUsername: stateController.activeUsername, status: nil)
+    } else {
+      guard let pendingPages = currentStory.pendingPages else {
+        print("pageIndex out of range")
+        return nil
+      }
+      if n - pageSet.count < pendingPages.count {
+        return PageData(fromManaged: pendingPages[n - pageSet.count], activeUsername: stateController.activeUsername, status: .Sending)
+      } else {
+        print("pageIndex out of range")
+        return nil
+      }
+    }
   }
   
-  func deleteStory(byId id: String?) {
+  func deleteStory(byId id: String?) throws {
     guard let storyId = id else {
       return
     }
-    managedStoryList.removeStoryWith(id: storyId)
-    stateController.deleteStory(id: storyId)
+    storyList.removeStoryWith(id: storyId)
+    try stateController.deleteStory(id: storyId)
   }
   
-  func archiveStory(byId id: String?) {
+  func archiveStory(byId id: String?) throws {
     guard let storyId = id else {
       return
     }
-    stateController.archiveStory(id: storyId)
+    try stateController.archiveStory(id: storyId)
   }
   
-  func unArchiveStory(byId id: String?) {
+  func unArchiveStory(byId id: String?) throws {
     guard let storyId = id else {
       return
     }
-    stateController.unArchiveStory(id: storyId)
+    try stateController.unArchiveStory(id: storyId)
   }
   
   func contributorsTextAt(index i: Int) -> String {
     // better username caching
-    let contributorUsernames = self.managedStoryList.managedStories[i].contributorUsernames()
+    let contributorUsernames = self.storyList.extendedStories[i].story.contributorUsernames()
     let otherNames = contributorUsernames.filter { $0 != stateController.activeUsername}
     if otherNames.count > 0 {
       return otherNames.joined(separator: ", ")
@@ -90,18 +106,27 @@ class StoryListTableViewModel {
   }
  
   func lastPositionAt(storyIndex i: Int) -> Int {
-    let storyId = managedStoryIdAt(index: i)
+    let storyId = extendedStoryIdAt(index: i)
     guard let lastPosition = storyScrollMap[storyId] else {
-      let endPosition = numPagesInManagedStoryAt(index: i)
+      let endPosition = numPagesInExtendedStoryAt(index: i)
       storyScrollMap[storyId] = endPosition
       return endPosition
     }
     return lastPosition
   }
   
-  func setStoryViewerStartingPoint(storyId: String, pageIndex: Int) {
-    let story = stateController.activeUserStoryById(id: storyId)
-    stateController.currentStory = story
+  func storyIndexFromId(storyId: String?) -> Int? {
+    return self.storyList.extendedStories.firstIndex(where: { $0.story.id == storyId })
+  }
+  
+  func setReplyStoryFromId(storyId: String) {
+    if let index = storyIndexFromId(storyId: storyId) {
+      stateController.replyStory = storyList.extendedStories[index]
+    }
+  }
+  
+  func setStoryViewerStartingPoint(storyIndex: Int, pageIndex: Int) {
+    stateController.currentStory = storyList.extendedStories[storyIndex]
     stateController.storyViewerIndex = pageIndex
   }
 }

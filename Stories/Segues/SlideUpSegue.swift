@@ -22,8 +22,8 @@ class SlideUpSegue: UIStoryboardSegue {
     window?.addSubview(bottomView)
     
     UIView.animate(withDuration: 0.6, animations: {() -> Void in
-      topView.frame = topView.frame.offsetBy(dx: 0, dy: -screenHeight)
       bottomView.frame = bottomView.frame.offsetBy(dx: 0, dy: -screenHeight)
+      topView.frame = topView.frame.offsetBy(dx: 0, dy: -screenHeight)
     }, completion: ({success -> Void in
       self.source.present(self.destination, animated: false, completion: nil)
     }))

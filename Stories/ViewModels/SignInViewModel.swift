@@ -10,31 +10,48 @@ import Foundation
 
 class SignInViewModel {
   private var stateController: StateController!
+  private var username: String = ""
+  let userSearcher = UserSearcher()
   
   init(_ stateController: StateController!) {
     self.stateController = stateController
   }
   
-  func registerNewUser(name: String?, completion: @escaping (Bool) -> ()) {
+  func checkUsernameAvailable(name: String?, completion: @escaping (AvailabilityStatus) -> ()) {
+    guard let name = name else {
+      return
+    }
+    userSearcher.isUsernameAvailable(name, completion: {status in
+        completion(status)
+    })
+  }
+  
+  func registerNewUser(name: String?, completion: @escaping (RegistrationStatus) -> ()) {
     guard let name = name else {
       return
     }
     do {
-      stateController.deleteLocalUser(name: name)
-      let newUser = try stateController.createLocalUser(name: name)
+      let localUserInteractor = LocalUserInteractor(managedContext: stateController.managedContext)
+      try localUserInteractor.deleteLocalUsersByName(name)
+      let newUser = try localUserInteractor.createLocalUser(name: name)
       let authenticator = Authenticator(localUser: newUser)
-      authenticator.register(completion: {(success, message) in
-        print("Registration successful?: ", success)
+      try authenticator.register(completion: {(status, message) in
+        print("Registration successful?: ", status)
         print("with message: ", message ?? "no message")
-        if (success) {
-          self.stateController.saveLocalUser(newUser)
+        if (status == .Registered) {
+          do {
+            try localUserInteractor.markAsRegistered(newUser)
+          } catch {
+            print(error)
+            completion(.UnknownError)
+          }
           self.setActiveUser(name: name)
         }
-        completion(success)
+        completion(status)
       })
     } catch {
       print("failed to create new local user with error: ", error)
-      completion(false)
+      completion(.UnknownError)
     }
   }
   
@@ -61,4 +78,18 @@ class SignInViewModel {
     return (string == filtered)
   }
 
+}
+
+enum AvailabilityStatus {
+  case Available
+  case Unavailable
+  case NetworkError
+  case UnknownError
+}
+
+enum RegistrationStatus {
+  case Registered
+  case AlreadyRegistered
+  case NetworkError
+  case UnknownError
 }

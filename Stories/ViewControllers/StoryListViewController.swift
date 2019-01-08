@@ -9,9 +9,24 @@
 
 import UIKit
 
+@IBDesignable
+class IndicatorDot: UIView {
+  
+  override func draw(_ rect: CGRect) {
+    let dotPath = UIBezierPath(ovalIn: rect)
+    let shapeLayer = CAShapeLayer()
+    shapeLayer.path = dotPath.cgPath
+    shapeLayer.fillColor = UIColor.red.cgColor
+    layer.addSublayer(shapeLayer)
+  }
+  
+}
+
 class StoryListViewController: UIViewController {
   //MARK: properties
   var viewModel: StoryListViewModel!
+  @IBOutlet weak var inboxLoadingIndicator: UIActivityIndicatorView!
+  @IBOutlet weak var newStoryIndicator: IndicatorDot!
   
   //MARK: actions
   @IBAction func newStory(_ sender: Any) {
@@ -36,8 +51,30 @@ class StoryListViewController: UIViewController {
   
   @IBAction func returnToStoryListView(segue: UIStoryboardSegue) {}
   
+  func onStorySyncStart() {
+    if let inboxLoadingIndicator = inboxLoadingIndicator {
+      DispatchQueue.main.async {
+        inboxLoadingIndicator.startAnimating()
+      }
+    }
+  }
+  
+  func onStorySyncComplete(success: Bool) {
+    //print("In viewcontroller onStoryFetchComplete")
+    if let inboxLoadingIndicator = inboxLoadingIndicator {
+      DispatchQueue.main.async {
+        inboxLoadingIndicator.stopAnimating()
+      }
+    }
+  }
+  
   override func viewDidLoad() {
     super.viewDidLoad()
+    viewModel.setOnStorySyncStart(onStorySyncStart)
+    viewModel.setOnStorySyncComplete(onStorySyncComplete)
+    if let newStoryIndicator = newStoryIndicator {
+      newStoryIndicator.isHidden = true
+    }
   }
   
   override func didReceiveMemoryWarning() {

@@ -11,6 +11,8 @@ import UIKit
 class ProfileViewController: UIViewController {
 
   @IBOutlet weak var usernameLabel: UILabel!
+  @IBOutlet weak var contactSearchBar: UISearchBar!
+  @IBOutlet weak var contactList: UITableView!
   
   var viewModel: ProfileViewModel!
   
@@ -27,6 +29,9 @@ class ProfileViewController: UIViewController {
     super.viewDidLoad()
     setUsernameLabel()
     viewModel.setOnActiveUserChange(setUsernameLabel)
+    contactSearchBar.delegate = self
+    contactList.dataSource = self
+    contactList.allowsSelection = false
   }
     
   @IBAction func profileInboxTouchUp(_ sender: Any) {
@@ -39,6 +44,10 @@ class ProfileViewController: UIViewController {
     } else {
       performSegue(withIdentifier: "ProfileToInbox", sender: nil)
     }
+  }
+  
+  @IBAction func addContactTouchUp(_ sender: Any) {
+    performSegue(withIdentifier: "ShowAddContacts", sender: nil)
   }
   
   func presentAccountsSelector() {
@@ -85,7 +94,13 @@ class ProfileViewController: UIViewController {
       return
     }))
     confirmDeleteAlert.addAction(UIAlertAction(title: "Delete", style: .destructive, handler: {_ in
-      self.viewModel.deleteActiveUser()
+      do {
+        try self.viewModel.deleteActiveUser()
+      } catch {
+        // TODO: UIALert error
+        print("Error deleting account")
+        print(error)
+      }
       self.presentAccountsSelector()
     }))
     self.present(confirmDeleteAlert, animated: true, completion: nil)
@@ -104,6 +119,66 @@ class ProfileViewController: UIViewController {
       let signIn = segue.destination as! SignInViewController
       signIn.viewModel = viewModel.newSignInViewModel()
     }
+    if segue.destination is AddContactsViewController {
+      let addContacts = segue.destination as! AddContactsViewController
+      addContacts.viewModel = viewModel.newAddContactsViewModel()
+    }
   }
 
+}
+
+extension ProfileViewController : UISearchBarDelegate {
+  func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+    self.viewModel.fetchContactsWithQuery(username: searchText)
+    self.contactList.reloadData()
+  }
+  
+  func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+    searchBar.resignFirstResponder()
+  }
+}
+
+class ContactCell: UITableViewCell {
+  weak var delegate: ContactCellDelegate?
+  
+  var username: String?
+  
+  @IBOutlet weak var usernameLabel: UILabel!
+  /*@IBAction func sendStoryTouchUp(_ sender: Any) {
+    delegate?.sendStory(delegatedFrom: self)
+  }*/
+}
+
+protocol ContactCellDelegate : class {
+  // func sendStory(delegatedFrom cell: ContactCell)
+}
+
+/*extension ProfileViewController : ContactCellDelegate {
+  func sendStory(delegatedFrom cell: ContactCell) {
+    viewModel.setStoryIntention(username: cell.username)
+    self.performSegue(withIdentifier: "ProfileToCamera", sender: nil)
+  }
+}*/
+
+extension ProfileViewController : UITableViewDataSource {
+  func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    //print("In tableView numOfRowsInSection")
+    return viewModel.numContacts()
+  }
+  
+  func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    let cell = tableView.dequeueReusableCell(withIdentifier: "ContactCell", for: indexPath) as! ContactCell
+    cell.username = viewModel.contactAt(indexPath.item)
+    cell.usernameLabel.text = cell.username
+    //cell.delegate = self
+    return cell
+  }
+  
+  func numberOfSections(in tableView: UITableView) -> Int {
+    if (viewModel.numContacts() > 0) {
+      return 1
+    } else {
+      return 0
+    }
+  }
 }

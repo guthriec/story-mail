@@ -44,7 +44,7 @@ class StoryListTableViewCell: UITableViewCell {
   }
   
   @IBAction func deleteStory(_ sender: Any) {
-    delegate?.deleteCell(delegatedFrom: self)
+    self.delegate?.deleteCell(delegatedFrom: self)
   }
   
   @IBAction func sendStoryToInbox(_ sender: Any) {
@@ -160,7 +160,7 @@ class StoryListTableViewController: UITableViewController {
   // MARK: - Table view data source
   override func numberOfSections(in tableView: UITableView) -> Int {
     var res: Int = 0
-    if (viewModel.numManagedStories() > 0) {
+    if (viewModel.numStories() > 0) {
       res = 1
       tableView.backgroundView = nil
     } else {
@@ -188,7 +188,7 @@ class StoryListTableViewController: UITableViewController {
 
   
   override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    return viewModel.numManagedStories()
+    return viewModel.numStories()
   }
   
   override func tableView(_ tableView: UITableView,
@@ -198,7 +198,7 @@ class StoryListTableViewController: UITableViewController {
     //cell.invalidateStoryLayout()
     cell.setStoryTag(forRow: indexPath.item)
     cell.setStoryLayoutDelegate(delegate: self)
-    cell.storyId = viewModel.managedStoryIdAt(index: indexPath.item)
+    cell.storyId = viewModel.extendedStoryIdAt(index: indexPath.item)
     cell.contributorsLabel.text = self.viewModel.contributorsTextAt(index: indexPath.item)
     DispatchQueue.main.async {
       cell.scrollToPosition(index: self.viewModel.lastPositionAt(storyIndex: indexPath.item))
@@ -217,7 +217,7 @@ extension StoryListTableViewController: UICollectionViewDataSource {
                       numberOfItemsInSection section: Int) -> Int {
     //print("calculating number of items in section 0, tag: ", collectionView.tag)
     //print("Num pages: ", viewModel.numPagesInManagedStoryAt(index: collectionView.tag))
-    return viewModel.numPagesInManagedStoryAt(index: collectionView.tag) + 1
+    return viewModel.numPagesInExtendedStoryAt(index: collectionView.tag) + 1
   }
   
   func collectionView(_ collectionView: UICollectionView,
@@ -229,61 +229,103 @@ extension StoryListTableViewController: UICollectionViewDataSource {
       let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "ReplyCell",
                                                     for: indexPath) as! ReplyCell
       cell.delegate = self
-      cell.storyId = viewModel.managedStoryIdAt(index: collectionView.tag)
+      cell.storyId = viewModel.extendedStoryIdAt(index: collectionView.tag)
       return cell
     }
-    let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "StoryCell",
-                                                  for: indexPath) as! PageCell
-    cell.delegate = self
-    cell.storyId = viewModel.managedStoryIdAt(index: collectionView.tag)
-    cell.pageIndex = indexPath.item
-    guard let imageView = cell.contentView.subviews[0] as? UIImageView else {
-      print("cell content view not an imageView!")
-      return cell
+    let page = self.viewModel.nthPageInExtendedStoryAt(storyIndex: collectionView.tag, pageIndex: indexPath.item)
+    guard let status = page?.status, let image = page?.backgroundImagePNG, let timestamp = page?.timeString, let authorName = page?.authorName else {
+      print("not enough page data supplied")
+      return collectionView.dequeueReusableCell(withReuseIdentifier: "ErrorCell", for: indexPath)
     }
-    guard let timestampLabel = cell.contentView.subviews[1].subviews[0] as? UILabel else {
-      print("selected view is not the timestamp label you were looking for")
+    if status == .OK {
+      let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "StoryCell",
+                                                    for: indexPath) as! PageCell
+      cell.delegate = self
+      cell.storyId = viewModel.extendedStoryIdAt(index: collectionView.tag)
+      cell.pageIndex = indexPath.item
+      guard let imageView = cell.contentView.subviews[0] as? UIImageView else {
+        print("cell content view not an imageView!")
+        return cell
+      }
+      guard let timestampLabel = cell.contentView.subviews[1].subviews[0] as? UILabel else {
+        print("selected view is not the timestamp label you were looking for")
+        return cell
+      }
+      guard let authorLabel = cell.contentView.subviews[2].subviews[0] as? UILabel else {
+        print("selected view is not the author label you were looking for")
+        return cell
+      }
+      DispatchQueue.main.async {
+        imageView.image = image
+        // register tap recognizer
+        imageView.isUserInteractionEnabled = true
+        let singleTap = UITapGestureRecognizer(target: cell, action: #selector(PageCell.imageTapDetected))
+        imageView.addGestureRecognizer(singleTap)
+        timestampLabel.text = timestamp
+        authorLabel.text = authorName
+      }
       return cell
-    }
-    guard let authorLabel = cell.contentView.subviews[2].subviews[0] as? UILabel else {
-      print("selected view is not the author label you were looking for")
-      return cell
-    }
-    DispatchQueue.main.async {
-      let page = self.viewModel.nthPageInManagedStoryAt(storyIndex: collectionView.tag, pageIndex: indexPath.item)
-      guard let image = page?.backgroundImagePNG, let timestamp = page?.timeString,
-        let authorName = page?.authorName else {
-          print("not enough page data supplied")
-          return
+    } else if status == .Sending {
+      let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "SendingCell", for: indexPath)
+      guard let imageView = cell.contentView.subviews[0] as? UIImageView else {
+        print("cell content view not an imageView!")
+        return cell
+      }
+      guard let activityIndicator = cell.contentView.subviews[1] as? UIActivityIndicatorView else {
+        print("selected view is not the activity indicator you were looking for")
+        return cell
       }
       imageView.image = image
-      // register tap recognizer
-      imageView.isUserInteractionEnabled = true
-      let singleTap = UITapGestureRecognizer(target: cell, action: #selector(PageCell.imageTapDetected))
-      imageView.addGestureRecognizer(singleTap)
-      timestampLabel.text = timestamp
-      authorLabel.text = authorName
+      activityIndicator.startAnimating()
+      return cell
+    } else {
+      return collectionView.dequeueReusableCell(withReuseIdentifier: "ErrorCell", for: indexPath)
     }
-    return cell
   }
 }
 
 extension StoryListTableViewController: StoryCellDelegate {
   func deleteCell(delegatedFrom cell: StoryListTableViewCell) {
-    viewModel.deleteStory(byId: cell.storyId)
+    let confirmationAlert = UIAlertController(title: "Confirm Delete",
+                                              message: "You can't undo this action",
+                                              preferredStyle: .alert)
+    confirmationAlert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+    confirmationAlert.addAction(UIAlertAction(title: "Delete", style: .destructive, handler: {_ in
+      do {
+        try self.viewModel.deleteStory(byId: cell.storyId)
+      } catch {
+        // TODO: non-crashing error alert here
+        print("Error Deleting Story")
+        print(error)
+      }
+    }))
+    self.present(confirmationAlert, animated: false, completion: nil)
   }
   func archiveCell(delegatedFrom cell: StoryListTableViewCell) {
-    viewModel.archiveStory(byId: cell.storyId)
+    do {
+      try viewModel.archiveStory(byId: cell.storyId)
+    } catch {
+      // TODO: non-crashing error alert here
+      print("Error Archiving Story")
+      print(error)
+    }
   }
   func sendCellToInbox(delegatedFrom cell: StoryListTableViewCell) {
-    viewModel.unArchiveStory(byId: cell.storyId)
+    do {
+      try viewModel.unArchiveStory(byId: cell.storyId)
+    } catch {
+      // TODO: non-crashing error alert here
+      print("Error Unrchiving Story")
+      print(error)
+    }
+
   }
 }
 
 extension StoryListTableViewController: ReplyCellDelegate {
   func reply(delegatedFrom cell: ReplyCell) {
     if let storyId = cell.storyId {
-      viewModel.setReplyId(storyId: storyId)
+      viewModel.setReplyStoryFromId(storyId: storyId)
       parent?.performSegue(withIdentifier: "ShowCamera", sender: nil)
     }
   }
@@ -291,13 +333,13 @@ extension StoryListTableViewController: ReplyCellDelegate {
 
 extension StoryListTableViewController: PageCellDelegate {
   func goToPage(delegatedFrom cell: PageCell) {
-    guard let storyId = cell.storyId else {
+    guard let storyId = cell.storyId, let storyIndex = viewModel.storyIndexFromId(storyId: storyId) else {
       return
     }
     guard let pageIndex = cell.pageIndex else {
       return
     }
-    viewModel.setStoryViewerStartingPoint(storyId: storyId, pageIndex: pageIndex)
+    viewModel.setStoryViewerStartingPoint(storyIndex: storyIndex, pageIndex: pageIndex)
     parent?.performSegue(withIdentifier: "ShowStory", sender: nil)
   }
 }

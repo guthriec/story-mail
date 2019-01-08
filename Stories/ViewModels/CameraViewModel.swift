@@ -15,6 +15,7 @@ class CameraViewModel {
   var userSearcher: UserSearcher
   
   var contributorResults: Array<String>
+  var matchingContacts: Array<String>
   var capturedImageData: Data?
   
   var capturedImage: UIImage? {
@@ -34,7 +35,7 @@ class CameraViewModel {
   
   func updateContributorsForReplyStory() {
     if let replyStory = self.stateController.replyStory {
-      self.contributors = replyStory.contributorUsernames().filter { $0 != self.stateController.activeUsername }
+      self.contributors = replyStory.story.contributorUsernames().filter { $0 != self.stateController.activeUsername }
     } else {
       self.contributors = []
     }
@@ -44,6 +45,7 @@ class CameraViewModel {
     self.stateController = stateController
     self.userSearcher = UserSearcher()
     self.contributorResults = []
+    self.matchingContacts = []
     self.contributors = []
     self.capturedImageData = nil
     updateContributorsForReplyStory()
@@ -54,10 +56,10 @@ class CameraViewModel {
     self.onContributorChange = onContributorChangeFn
   }
   
-  func createSinglePageStory(backgroundImagePNG: Data) -> StoryMO? {
+  func createSinglePageStory(backgroundImagePNG: Data) -> ExtendedStory? {
     do {
       let page = try stateController.createNewPage(backgroundPNG: backgroundImagePNG, timestamp: Date())
-      return try stateController.createNewStory(withPages: [page])
+      return try stateController.createNewExtendedStory(withPendingPages: [page])
     } catch {
       print(error)
       return nil
@@ -65,19 +67,36 @@ class CameraViewModel {
   }
   
   func isReplying() -> Bool {
-    return (stateController.replyingToStoryId != nil)
+    return (stateController.replyStory != nil)
   }
   
-  func addReply(backgroundImagePNG: Data?) throws -> StoryMO? {
+  func addReply(backgroundImagePNG: Data?) throws -> ExtendedStory? {
     guard let imageData = backgroundImagePNG else {
       throw CameraViewError.NoImageProvided
     }
     let newPage = try stateController.createNewPage(backgroundPNG: imageData, timestamp: Date())
-    return try stateController.addReply(managedPage: newPage)
+    return stateController.addReply(with: newPage)
   }
   
   func handleCapture(backgroundImagePNG: Data) {
     self.capturedImageData = backgroundImagePNG
+  }
+  
+  func handleStoryUpdate(updatedStory: ExtendedStory, success: Bool, completion: @escaping (Bool) -> ()) {
+    if (success) {
+      do {
+        try updatedStory.commitChanges()
+        try self.stateController.managedContext.save()
+        self.stateController.refreshStories()
+        completion(true)
+      } catch {
+        print("error saving changes: ", error)
+        completion(false)
+      }
+    } else {
+      print("story update failure")
+      completion(false)
+    }
   }
   
   func handleSend(completion: @escaping (Bool) -> ()) throws {
@@ -97,64 +116,45 @@ class CameraViewModel {
           completion(false)
           return
         }
-        storySynchronizer.updateStory(story: updatedStory, completion: {(success) in
-          if (success) {
-            self.stateController.persistData()
-          } else {
-            print("story update failure")
-          }
-          completion(success)
+        stateController.replyStory = nil
+        storySynchronizer.updateStory(extendedStory: updatedStory, completion: {(success) in
+          self.handleStoryUpdate(updatedStory: updatedStory, success: success, completion: completion)
         })
       } catch {
-        print(error)
+        print("Error in handling reply send: ", error)
       }
     } else {
+      // Creating a new story
       guard let newStory = createSinglePageStory(backgroundImagePNG: imageData) else {
         throw CameraViewError.NoStoryProvided
       }
+      let userInteractor = UserInteractor(managedContext: stateController.managedContext)
       for contributorName in contributors {
-        guard let contributor = stateController.fetchUserByName(username: contributorName) else {
+        guard let contributor = userInteractor.fetchExact(username: contributorName) else {
           print("failed to fetch contributor")
           continue
         }
         //print("about to add to new story contributors...")
-        newStory.addToContributors(contributor)
+        newStory.story.addToContributors(contributor)
       }
-      storySynchronizer.updateStory(story: newStory, completion: {(success) in
-        if (success) {
-          self.stateController.addStoryToInbox(newStory)
-          self.stateController.persistData()
-        } else {
-          print("story start failure")
-        }
-        completion(success)
+      self.stateController.addExtendedStoryToInbox(newStory)
+      storySynchronizer.updateStory(extendedStory: newStory, completion: {(success) in
+        self.handleStoryUpdate(updatedStory: newStory, success: success, completion: completion)
       })
     }
   }
   
   func searchUsersFor(_ username: String, completion: @escaping (Bool) -> ()) {
-    //print("in searchUsersFor")
-    let context = self.stateController.managedContext
-    let userFetchRequest = NSFetchRequest<UserMO>(entityName: "User")
-    if (username.count > 0) {
-      userFetchRequest.predicate = NSPredicate(format: "username CONTAINS %@", username)
-    }
-    //TODO: Fetch limit
-    //print("story fetch request: ", storyFetchRequest)
-    var userResults = Array<UserMO>()
-    do {
-      userResults = try context.fetch(userFetchRequest)
-    } catch let error as NSError {
-      print("Could not fetch. \(error), \(error.userInfo)")
-    }
-    print("Fetched users for username: ", userResults)
-    let usernameResults = userResults.map { $0.username! }
-    self.contributorResults = usernameResults.filter { $0 != self.stateController.activeUsername }
+    let userInteractor = UserInteractor(managedContext: stateController.managedContext)
+    let usernameResults = userInteractor.fetchUsernamesMatchingPartial(username: username)
+    self.matchingContacts = usernameResults.filter { $0 != self.stateController.activeUsername }
     do {
       try userSearcher.findMatchingUsers(username, completion: { results in
         //print("in userSearcher.findMatchingUsers completion with results: ", results)
+        self.contributorResults = []
         for remoteResult in results {
-          if !self.contributorResults.contains(remoteResult) && remoteResult != self.stateController.activeUsername {
+          if !self.matchingContacts.contains(remoteResult) &&
+             remoteResult != self.stateController.activeUsername {
             self.contributorResults.append(remoteResult)
           }
         }
@@ -166,20 +166,28 @@ class CameraViewModel {
     }
   }
   
+  func numMatchingContacts() -> Int {
+    return matchingContacts.count
+  }
+  
   func numSearchResults() -> Int {
     return contributorResults.count
+  }
+  
+  func matchingContactResultAt(_ index: Int) -> String {
+    return matchingContacts[index]
   }
   
   func contributorResultAt(_ index: Int) -> String {
     return contributorResults[index]
   }
   
-  func toggleContributor(_ username: String?) {
+  func toggleContributor(_ username: String?) throws {
     guard let username = username else {
       return
     }
     if (!contributors.contains(username)) {
-      guard let savedUsername = userSearcher.saveSearchResult(username: username, stateController: self.stateController)?.username! else {
+      guard let savedUsername = try userSearcher.saveSearchResult(username: username, stateController: self.stateController)?.username! else {
         return
       }
       contributors.append(savedUsername)

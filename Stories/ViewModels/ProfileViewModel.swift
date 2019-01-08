@@ -10,6 +10,7 @@ import Foundation
 
 class ProfileViewModel {
   private var stateController: StateController!
+  var matchingContacts: Array<String>
   
   func setOnActiveUserChange(_ onActiveUserChangeFn: (() -> ())?) {
     stateController.onActiveUserChange = onActiveUserChangeFn
@@ -17,6 +18,8 @@ class ProfileViewModel {
   
   init(_ stateController: StateController!) {
     self.stateController = stateController
+    matchingContacts = Array<String>()
+    fetchContactsWithQuery(username: "")
   }
   
   var activeUsername: String? {
@@ -35,8 +38,29 @@ class ProfileViewModel {
     return SignInViewModel(stateController)
   }
   
-  func deleteActiveUser() {
-    stateController.deleteActiveUser()
+  func deleteActiveUser() throws {
+    try stateController.deleteActiveUser()
   }
   
+  func fetchContactsWithQuery(username: String) {
+    let userInteractor = UserInteractor(managedContext: stateController.managedContext)
+    matchingContacts = userInteractor.fetchUsernamesMatchingPartial(username: username)
+                                     .filter {$0 != activeUsername}
+  }
+  
+  func numContacts() -> Int {
+    return matchingContacts.count
+  }
+  
+  func contactAt(_ position: Int) -> String? {
+    if position < matchingContacts.count {
+      return matchingContacts[position]
+    } else {
+      return nil
+    }
+  }
+  
+  func newAddContactsViewModel() -> AddContactsViewModel {
+    return AddContactsViewModel(stateController)
+  }
 }

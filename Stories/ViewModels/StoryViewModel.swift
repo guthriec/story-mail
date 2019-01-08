@@ -25,10 +25,27 @@ class StoryViewModel {
     guard let currentStory = stateController.currentStory else {
       return false
     }
-    guard let currentPage = currentStory.pages?[index] as! PageMO? else {
+    guard let pageCount = currentStory.story.pages?.count else {
       return false
     }
-    currentPageData = PageData(fromManaged: currentPage, activeUsername: stateController.activeUsername)
+    if index < pageCount {
+      guard let currentPage = currentStory.story.pages?[index] as! PageMO? else {
+        return false
+      }
+      currentPageData = PageData(fromManaged: currentPage,
+                                 activeUsername: stateController.activeUsername,
+                                 status: nil)
+    } else {
+      if let pendingPages = currentStory.pendingPages {
+        if index - pageCount < pendingPages.count {
+          currentPageData = PageData(fromManaged: pendingPages[index - pageCount], activeUsername: stateController.activeUsername, status: .Sending)
+        } else {
+          return false
+        }
+      } else {
+        return false
+      }
+    }
     return true
   }
   
@@ -39,7 +56,7 @@ class StoryViewModel {
     guard let currentStory = stateController.currentStory else {
       return false
     }
-    guard let pages = currentStory.pages else {
+    guard let pages = currentStory.story.pages else {
       return false
     }
     if currIndex < pages.count - 1 {

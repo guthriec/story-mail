@@ -16,9 +16,14 @@ class StorySynchronizer {
     let creator: String
   }
   
-  
-  struct StoryUpdate: Codable {
+  struct SimpleStoryUpdate: Codable {
     let newPages: Array<Page>
+    let storyId: String
+    let contributors: Array<String>
+  }
+  
+  struct IndexedStoryUpdate: Codable {
+    let newPages: Dictionary<Int, Page>
     let storyId: String
     let contributors: Array<String>
   }
@@ -56,15 +61,15 @@ class StorySynchronizer {
     self.authenticator = Authenticator(localUser: self.localUser)
   }
   
-  private func newPagesForUpdate(_ update: StoryUpdate, resourceMap: [String : Data]) -> Array<PageMO>? {
+  private func newPagesForUpdate(_ update: SimpleStoryUpdate, resourceMap: [String : Data]) -> Array<PageMO>? {
     var res = Array<PageMO>()
-    print("extracting pages with resourceMap: ", resourceMap)
+    //print("extracting pages with resourceMap: ", resourceMap)
     for page in update.newPages {
       guard let backgroundData = resourceMap[page.backgroundResourceId] else {
         print("failed to extract image data from resource map", page.backgroundResourceId)
         return nil
       }
-      guard let newPage = stateController.createNewPage(backgroundPNG: backgroundData,
+      guard let newPage = stateController.createNewPage(id: page.id, backgroundPNG: backgroundData,
                                                         timestamp: page.timestamp,
                                                         authorName: page.creator)
         else {
@@ -73,116 +78,102 @@ class StorySynchronizer {
       }
       res.append(newPage)
     }
-    print("NEWPAGES LENGTH: ", res.count)
     return res
   }
   
-  private func getMessages(completion: @escaping (([String : StoryUpdate])?) -> ()) {
-    guard let messageUrl = apiWorker.urlOfEndpoint("/messages") else {
-      print("couldn't create message url endpoint in storysynchronizer.getupdates")
-      completion(nil)
-      return
-    }
-    apiWorker.get(url: messageUrl, jwt: self.localUser.getJWT(), completion: {(success, res) in
-      guard let resString = res, let resData = resString.data(using: String.Encoding.utf8) else {
-        print("Couldn't parse message response")
-        completion(nil)
-        return
-      }
-      guard let messageRes = try? JSONDecoder().decode([NewMessage].self, from: resData) else {
-        print("Couldn't parse message JSON ^^ from: ", resString)
-        completion(nil)
-        return
-      }
-      
-      var storyUpdates = [String : StoryUpdate]()
-      
-      for message in messageRes {
+  private func getMessages(completion: @escaping (([String : SimpleStoryUpdate])?) -> ()) {
+    do {
+      let messageUrl = try apiWorker.urlOfEndpoint("/messages")
+      apiWorker.get(url: messageUrl, jwt: self.localUser.getJWT(), completion: {(success, res) in
+        guard let resString = res, let resData = resString.data(using: String.Encoding.utf8) else {
+          print("Couldn't parse message response")
+          completion(nil)
+          return
+        }
+        guard let messageRes = try? JSONDecoder().decode([NewMessage].self, from: resData) else {
+          print("Couldn't parse message JSON ^^ from: ", resString)
+          completion(nil)
+          return
+        }
         
-        // parse payload
-        guard let payloadData = message.payload.data(using: String.Encoding.utf8) else {
-          print("Couldn't parse message payload")
-          completion(nil)
-          return
+        var storyUpdates = [String : SimpleStoryUpdate]()
+        
+        for message in messageRes {
+          
+          // parse payload
+          guard let payloadData = message.payload.data(using: String.Encoding.utf8) else {
+            print("Couldn't parse message payload")
+            completion(nil)
+            return
+          }
+          guard let newStoryUpdate = try? JSONDecoder().decode(SimpleStoryUpdate.self, from: payloadData) else {
+            print("Couldn't parse message payload JSON")
+            completion(nil)
+            return
+          }
+          storyUpdates[message.id] = newStoryUpdate
         }
-        guard let newStoryUpdate = try? JSONDecoder().decode(StoryUpdate.self, from: payloadData) else {
-          print("Couldn't parse message payload JSON")
-          completion(nil)
-          return
-        }
-        storyUpdates[message.id] = newStoryUpdate
-      }
-      completion(storyUpdates)
-    })
+        completion(storyUpdates)
+      })
+    } catch {
+      completion(nil)
+    }
   }
   
   private func getResources(messageId: String, completion: @escaping ([String : Data]?) -> ()) {
-    guard let resourcesUrl = apiWorker.urlOfEndpoint("/messages/" + messageId + "/resources") else {
-      print("couldn't create resources url for message in getupdates")
+    do {
+      let resourcesUrl = try apiWorker.urlOfEndpoint("/messages/" + messageId + "/resources")
+      apiWorker.get(url: resourcesUrl, jwt: self.localUser.getJWT(), completion: {(success,res) in
+        guard let resString = res, let resData = resString.data(using: String.Encoding.utf8) else {
+          print("Couldn't parse resource message response")
+          completion(nil)
+          return
+        }
+        guard let resourceRes = try? JSONDecoder().decode([MessageResource].self, from: resData) else {
+          print("Couldn't parse resource message JSON")
+          completion(nil)
+          return
+        }
+        var resourceMap = [String : Data]()
+        for resource in resourceRes {
+          resourceMap.updateValue(resource.data, forKey: resource.resourceId)
+        }
+        completion(resourceMap)
+      })
+    } catch {
       completion(nil)
-      return
     }
-    apiWorker.get(url: resourcesUrl, jwt: self.localUser.getJWT(), completion: {(success,res) in
-      guard let resString = res, let resData = resString.data(using: String.Encoding.utf8) else {
-        print("Couldn't parse resource message response")
-        completion(nil)
-        return
-      }
-      guard let resourceRes = try? JSONDecoder().decode([MessageResource].self, from: resData) else {
-        print("Couldn't parse resource message JSON")
-        completion(nil)
-        return
-      }
-      var resourceMap = [String : Data]()
-      for resource in resourceRes {
-        resourceMap.updateValue(resource.data, forKey: resource.resourceId)
-      }
-      completion(resourceMap)
-    })
   }
   
   private func deleteMessage(_ id: String, completion: @escaping (Bool) -> ()) {
     messageDeleter.deleteMessage(id, from: self.localUser, completion: { success in
       completion(success)
-    });
+    })
   }
-  
-  private func reauthenticateIfNecessary(completion: @escaping (Bool) -> ()) {
-    var isAuthenticated = false
-    print("accessing lastAuthenticated property: ", self.localUser.lastAuthenticated ?? "none")
-    if let lastAuthenticated = self.localUser.lastAuthenticated {
-      isAuthenticated = true
-      print("Time interval...", abs(lastAuthenticated.timeIntervalSinceNow))
-      if (abs(lastAuthenticated.timeIntervalSinceNow) > 60*60*23) {
-        isAuthenticated = false
-      }
-    }
-    print("after checking last authenticated, we think we are authenticated: ", isAuthenticated)
-    if (!isAuthenticated) {
-      authenticator.authenticate(completion: { success in
-        print("reauthenticated: ", success)
-        completion(success)
-      })
-    } else {
-      print("should now be authenticated")
-      completion(true)
-    }
-  }
-  
+    
   func pullRemoteStories(completion: @escaping (Bool) -> ()) {
-    //print("pulling remote stories")
-    reauthenticateIfNecessary(completion: {success in
-      //print("reauthenticated?: ", success)
+    //print("about to reauth if necessary")
+    authenticator.reauthenticateIfNecessary(completion: {success in
+      if(!success) {
+        print("couldn't reauthenticate")
+        completion(false)
+        return
+      }
+      //print("about to getMessages")
       self.getMessages(completion: {(updates) in
         guard let updates = updates else {
-          print("getMessages passed in nil")
+          print("getMessages updates was nil")
           completion(false)
           return
         }
         var multiResourceMap = [String : Data]()
-        var updatesForStories = [String : Array<StoryUpdate>]()
+        var updatesForStories = [String : Array<SimpleStoryUpdate>]()
         var messageIds = Array<String>()
         var updateCounter = updates.count
+        if updateCounter == 0 {
+          //print("No new updates")
+          completion(true)
+        }
         for (messageId, update) in updates {
           if updatesForStories[update.storyId]?.append(update) == nil {
             updatesForStories[update.storyId] = [update]
@@ -207,8 +198,7 @@ class StorySynchronizer {
                 for update in updates {
                   guard let newPages = self.newPagesForUpdate(update, resourceMap: multiResourceMap) else {
                     print("Couldn't extract pages from update")
-                    completion(false)
-                    return
+                    continue
                   }
                   pagesToAdd.append(contentsOf: newPages)
                   contributorsToAdd.append(contentsOf: update.contributors)
@@ -216,37 +206,42 @@ class StorySynchronizer {
                 do {
                   let story = try self.stateController.findOrCreateStory(withId: storyId)
                   try story.addPagesAndUpdate(pages: pagesToAdd)
-                  self.stateController.addContributorsToStoryByUsername(story: story, usernames: contributorsToAdd)
+                  try self.stateController.addContributorsToStoryByUsername(story: story, usernames: contributorsToAdd)
                   self.stateController.addStoryToInbox(story)
                 } catch {
                   print("Error in adding pages to story: ", error)
-                  return
+                  continue
                 }
               }
-              self.stateController.refreshStories()
-              self.stateController.persistData()
-              
-              /*for messageId in messageIds {
+              //self.stateController.persistData()
+              //self.stateController.refreshStories()
+              completion(true)
+              for messageId in messageIds {
                 _ = self.deleteMessage(messageId, completion: { success in
                   print("Message deleted: ", success)
                 })
-              }*/
+              }
             }
           })
         }
       })
+      
     })
   }
   
-  func updateStory(story: StoryMO, completion: @escaping (Bool) -> ()) {
-    reauthenticateIfNecessary(completion: {success in
+  func updateStory(extendedStory: ExtendedStory, completion: @escaping (Bool) -> ()) {
+    authenticator.reauthenticateIfNecessary(completion: {success in
       if(!success) {
         print("couldn't reauthenticate")
         completion(false)
         return
       }
-      let storyPages = story.pages?.array as! Array<PageMO>
-      guard let mostRecentPage = storyPages.last else {
+      guard let updatePages = extendedStory.pendingPages else {
+        print("No pending pages")
+        completion(false)
+        return
+      }
+      guard let mostRecentPage = updatePages.last else {
         print("No most recently added page")
         completion(false)
         return
@@ -272,10 +267,10 @@ class StorySynchronizer {
                           timestamp: mostRecentPage.value(forKey: "timestamp") as! Date,
                           backgroundResourceId: resourceId,
                           creator: creatorName)
-          var contributors = story.contributorUsernames()
-          let storyUpdate = StoryUpdate(newPages: [page],
-                                        storyId: story.value(forKey: "id") as! String,
-                                        contributors: story.contributorUsernames())
+          var contributors = extendedStory.story.contributorUsernames()
+          let storyUpdate = SimpleStoryUpdate(newPages: [page],
+                                              storyId: extendedStory.story.value(forKey: "id") as! String,
+                                              contributors: contributors)
           do {
             let payloadJson = try JSONEncoder().encode(storyUpdate)
             guard let payloadString = String(data: payloadJson, encoding: String.Encoding.utf8) else {
@@ -284,24 +279,26 @@ class StorySynchronizer {
               return
             }
             contributors = contributors.filter { $0 != creatorName }
+            let userInteractor = UserInteractor(managedContext: self.stateController.managedContext)
             var numSuccessfulMessages = 0
             for contributor in contributors {
               print("sending message to recipient: ", contributor)
-              self.messageSender.sendMessage(payloadString,
-                                             from: self.localUser,
-                                             to: contributor,
-                                             resourceIds: [resourceId],
-                                             completion: {(success, _) in
-                                              if (!success) {
-                                                print("failed to send message")
-                                                completion(false)
-                                              } else {
-                                                numSuccessfulMessages += 1
-                                                if (numSuccessfulMessages == contributors.count) {
-                                                  print("calling completion on update story")
-                                                  completion(true)
-                                                }
-                                              }
+              self.messageSender.sendMessage(payloadString, from: self.localUser, to: contributor, resourceIds: [resourceId], completion: {(success, _) in
+                if (!success) {
+                  print("failed to send message")
+                  completion(false)
+                } else {
+                  do {
+                    try userInteractor.didContact(username: contributor)
+                  } catch {
+                    print("Error registering send with user lastContacted")
+                  }
+                  numSuccessfulMessages += 1
+                  if (numSuccessfulMessages == contributors.count) {
+                    print("calling completion on update story")
+                    completion(true)
+                  }
+                }
               })
             }
           } catch {
